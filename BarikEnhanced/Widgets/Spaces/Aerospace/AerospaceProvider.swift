@@ -47,7 +47,10 @@ class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
             }
         }
 
-        let focusedWindow = fetchFocusedWindow()
+        // On an empty workspace `list-windows --focused` exits 1, which would
+        // count toward the circuit breaker and pause the widget for a minute.
+        let focusedSpaceHasWindows = windows.contains { $0.workspace == focusedSpace?.id }
+        let focusedWindow = focusedSpaceHasWindows ? fetchFocusedWindow() : nil
         var spaceDict = Dictionary(
             uniqueKeysWithValues: spaces.map { ($0.id, $0) })
 
