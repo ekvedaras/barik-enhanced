@@ -93,7 +93,7 @@ struct ScriptDocument: Decodable, Equatable {
 }
 
 struct ScriptItem: Decodable, Equatable, Identifiable {
-    enum Style: String { case pill, plain }
+    enum Style: String { case pill, plain, separator }
     enum Animation: String { case none, pulse, shake, spin }
 
     let id: String
@@ -254,5 +254,11 @@ enum ScriptColor: Equatable {
         case .pink: AnyShapeStyle(Color.pink)
         case let .rgb(red, green, blue): AnyShapeStyle(Color(red: red, green: green, blue: blue))
         }
+    }
+
+    /// A colour marks state on the icon; the label stays primary so it reads on any wallpaper.
+    /// Only `secondary` dims the label too: the whole item is inactive.
+    var labelStyle: AnyShapeStyle {
+        self == .secondary ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary)
     }
 }

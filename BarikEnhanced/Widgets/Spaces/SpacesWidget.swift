@@ -7,7 +7,7 @@ struct SpacesWidget: View {
     var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
 
     var body: some View {
-        HStack(spacing: foregroundHeight < 30 ? 0 : 8) {
+        HStack(spacing: foregroundHeight < 30 ? 0 : BarStyle.pillSpacing) {
             ForEach(viewModel.spaces) { space in
                 SpaceView(space: space)
             }
@@ -40,11 +40,11 @@ private struct SpaceView: View {
         let isFocused = space.windows.contains { $0.isFocused } || space.isFocused
         let badgeModels = ScriptWidgets.shared.models(inSpace: space.id)
         HStack(spacing: 0) {
-            Spacer().frame(width: 10)
+            Spacer().frame(width: BarStyle.pillPadding)
             if showKey {
                 Text(space.id)
-                    .font(.headline)
-                    .frame(minWidth: 15)
+                    .font(BarStyle.font)
+                    .frame(minWidth: 10)
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer().frame(width: 5)
             }
@@ -56,9 +56,9 @@ private struct SpaceView: View {
                     WindowView(window: window, space: space)
                 }
             }
-            Spacer().frame(width: 10)
+            Spacer().frame(width: BarStyle.pillPadding)
         }
-        .frame(height: 30)
+        .frame(height: BarStyle.pillHeight(foregroundHeight: foregroundHeight))
         .background {
             ForEach(badgeModels, id: \.name) { model in
                 SpaceBadgePulse(model: model)
@@ -73,7 +73,9 @@ private struct SpaceView: View {
                  ? Color.active
                  : isHovered ? Color.noActive : Color.noActive)
         )
-        .clipShape(RoundedRectangle(cornerRadius: foregroundHeight < 30 ? 0 : 8, style: .continuous))
+        .clipShape(RoundedRectangle(
+            cornerRadius: foregroundHeight < 30 ? 0 : BarStyle.pillRadius(foregroundHeight: foregroundHeight),
+            style: .continuous))
         .shadow(color: .shadow, radius: foregroundHeight < 30 ? 0 : 2)
         .transition(.blurReplace)
         .onTapGesture {
@@ -94,15 +96,16 @@ private struct SpaceBadges: View {
         ForEach(model.items) { item in
             HStack(spacing: 3) {
                 if let icon = item.icon {
-                    ScriptIconView(icon: icon, size: 13)
+                    ScriptIconView(icon: icon, size: BarStyle.iconSize, weight: .regular)
+                        .foregroundStyle(item.color?.style ?? AnyShapeStyle(.primary))
                 }
                 if let label = item.label {
                     Text(label)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(BarStyle.font)
                         .fixedSize()
+                        .foregroundStyle(item.color?.labelStyle ?? AnyShapeStyle(.primary))
                 }
             }
-            .foregroundStyle(item.color?.style ?? AnyShapeStyle(.primary))
             .help(item.tooltip ?? "")
             .padding(.trailing, 5)
             .transition(.blurReplace)
@@ -153,12 +156,12 @@ private struct WindowView: View {
     var body: some View {
         let titleMaxLength = maxLength
         let effectiveMaxLength = space.windows.count > 3 ? min(titleMaxLength, 20) : titleMaxLength
-        let size: CGFloat = 21
+        let size: CGFloat = 16
         let sameAppCount = space.windows.filter { $0.appName == window.appName }
             .count
         let title = sameAppCount > 1 && !alwaysDisplayAppTitleFor.contains { $0 == window.appName } ? window.title : (window.appName ?? "")
         let spaceIsFocused = space.windows.contains { $0.isFocused }
-        HStack {
+        HStack(spacing: 4) {
             ZStack {
                 if let icon = window.appIcon {
                     Image(nsImage: icon)
@@ -178,25 +181,20 @@ private struct WindowView: View {
             .transition(.blurReplace)
 
             if window.isFocused, !title.isEmpty, showTitle {
-                HStack {
-                    Text(
-                        title.count > effectiveMaxLength
-                            ? String(title.prefix(effectiveMaxLength)) + "..."
-                            : title
-                    )
-                    .fixedSize(horizontal: true, vertical: false)
-                    .shadow(color: .foregroundShadow, radius: 3)
-                    .fontWeight(.semibold)
-                    Spacer().frame(width: 5)
-                }
+                Text(
+                    title.count > effectiveMaxLength
+                        ? String(title.prefix(effectiveMaxLength)) + "..."
+                        : title
+                )
+                .font(BarStyle.font)
+                .fixedSize(horizontal: true, vertical: false)
                 .transition(.blurReplace)
             }
         }
         .padding(.all, 2)
         .background(isHovered || (!showTitle && window.isFocused) ? .selected : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
         .animation(.smooth, value: isHovered)
-        .frame(height: 30)
         .contentShape(Rectangle())
         .onTapGesture {
             viewModel.switchToSpace(space)

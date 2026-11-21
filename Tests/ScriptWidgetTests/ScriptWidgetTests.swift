@@ -35,6 +35,13 @@ import TOMLDecoder
         #expect(item == ScriptItem(id: "item-0", label: "a"))
     }
 
+    @Test func decodesSeparatorStyle() throws {
+        let json = #"{"items": [{"id": "sep", "style": "separator"}]}"#
+        let item = try #require(ScriptDocument.parse(Data(json.utf8)).items.first)
+
+        #expect(item.style == .separator)
+    }
+
     @Test func duplicateIdsAreMadeUnique() throws {
         let json = #"{"items": [{"id": "a"}, {"id": "a"}, {}]}"#
         let ids = try ScriptDocument.parse(Data(json.utf8)).items.map(\.id)

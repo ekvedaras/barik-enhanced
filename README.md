@@ -87,7 +87,7 @@ up=$(uptime | sed -E 's/.*up ([^,]*),.*/\1/')
 printf '{"items":[{"id":"up","icon":"sf:clock","label":"%s","color":"green","click":"open -b com.apple.ActivityMonitor"}]}\n' "$up"
 ```
 
-Item fields: `id`, `icon` (`sf:<symbol>`, `app:<bundle id>`, `file:<path>`, `text:<chars>`), `label`, `color` (`accent`, `red`, ..., `#rrggbb`), `style` (`pill`/`plain`), `outline`, `joined`, `animation` (`none`/`pulse`/`shake`/`spin`), `tooltip`, `click`, `right_click`, `popup` (rows of `icon`, `label`, `color`, `click`). `{"items":[]}` shows nothing. A widget table with `space = "<workspace>"` draws its items inside that workspace's pill in the Spaces widget.
+Item fields: `id`, `icon` (`sf:<symbol>`, `app:<bundle id>`, `file:<path>`, `text:<chars>`), `label`, `color` (`accent`, `red`, ..., `#rrggbb`; tints the icon, the label stays primary unless `secondary`), `style` (`pill`/`plain`/`separator`, a thin divider between groups), `outline`, `joined`, `animation` (`none`/`pulse`/`shake`/`spin`), `tooltip`, `click`, `right_click`, `popup` (rows of `icon`, `label`, `color`, `click`). `{"items":[]}` shows nothing. A widget table with `space = "<workspace>"` draws its items inside that workspace's pill in the Spaces widget.
 
 ### CLI
 

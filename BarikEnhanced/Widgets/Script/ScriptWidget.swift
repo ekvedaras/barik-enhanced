@@ -11,7 +11,7 @@ struct ScriptWidget: View {
 
     var body: some View {
         if !model.items.isEmpty, ScriptWidgets.space(of: model.name) == nil {
-            HStack(spacing: 4) {
+            HStack(spacing: BarStyle.pillSpacing) {
                 ForEach(runs(of: model.items), id: \.first!.id) { run in
                     HStack(spacing: 1) {
                         ForEach(Array(run.enumerated()), id: \.element.id) { index, item in
@@ -60,11 +60,11 @@ private struct ScriptItemView: View {
     private var isOverflowing: Bool { overflowHidden.contains(overflowEntry.key) }
 
     private var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
-    private var pillHeight: CGFloat { min(26, max(16, foregroundHeight - 8)) }
+    private var pillHeight: CGFloat { BarStyle.pillHeight(foregroundHeight: foregroundHeight) }
     private var animation: ScriptItem.Animation { reduceMotion ? .none : item.animation }
 
     private var shape: UnevenRoundedRectangle {
-        let radius = pillHeight * 0.3
+        let radius = BarStyle.pillRadius(foregroundHeight: foregroundHeight)
         let inner: CGFloat = 2
         return UnevenRoundedRectangle(
             topLeadingRadius: joinedLeading ? inner : radius,
@@ -75,9 +75,33 @@ private struct ScriptItemView: View {
     }
 
     var body: some View {
+        if item.style == .separator {
+            BarSeparator()
+                .frame(height: pillHeight)
+                .help(item.tooltip ?? "")
+                .opacity(isOverflowing ? 0 : 1)
+                .background(frameReporter)
+        } else {
+            pill
+        }
+    }
+
+    private var frameReporter: some View {
+        GeometryReader { geometry in
+            Color.clear
+                .onAppear { rect = geometry.frame(in: .global) }
+                .onChange(of: geometry.frame(in: .global)) { _, newRect in rect = newRect }
+                .preference(
+                    key: ScriptOverflow.FramesKey.self,
+                    value: [ScriptOverflow.Entry(
+                        name: model.name, itemID: item.id, frame: geometry.frame(in: .global))])
+        }
+    }
+
+    private var pill: some View {
         content
             .modifier(Pulse(active: animation == .pulse))
-            .padding(.horizontal, item.style == .pill ? 8 : 2)
+            .padding(.horizontal, item.style == .pill ? BarStyle.pillPadding : 2)
             .frame(height: pillHeight)
             .background {
                 if item.style == .pill {
@@ -92,17 +116,7 @@ private struct ScriptItemView: View {
             .shadow(color: item.style == .pill ? .shadow : .clear, radius: 2)
             .modifier(Shake(active: animation == .shake))
             .foregroundStyle(item.style == .pill ? AnyShapeStyle(Color.foreground) : AnyShapeStyle(.primary))
-            .background(
-                GeometryReader { geometry in
-                    Color.clear
-                        .onAppear { rect = geometry.frame(in: .global) }
-                        .onChange(of: geometry.frame(in: .global)) { _, newRect in rect = newRect }
-                        .preference(
-                            key: ScriptOverflow.FramesKey.self,
-                            value: [ScriptOverflow.Entry(
-                                name: model.name, itemID: item.id, frame: geometry.frame(in: .global))])
-                }
-            )
+            .background(frameReporter)
             .background {
                 if let rightClickAction, !isOverflowing {
                     RightClickCatcher(action: rightClickAction)
@@ -119,16 +133,17 @@ private struct ScriptItemView: View {
     private var content: some View {
         HStack(spacing: 4) {
             if let icon = item.icon {
-                ScriptIconView(icon: icon, size: 13)
+                ScriptIconView(icon: icon, size: BarStyle.iconSize, weight: .regular)
                     .modifier(Spin(active: animation == .spin))
+                    .foregroundStyle(item.color?.style ?? AnyShapeStyle(.primary))
             }
             if let label = item.label {
                 Text(label)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(BarStyle.font)
                     .fixedSize()
+                    .foregroundStyle(item.color?.labelStyle ?? AnyShapeStyle(.primary))
             }
         }
-        .foregroundStyle(item.color?.style ?? AnyShapeStyle(.primary))
     }
 
     private var popupID: String { "\(ScriptWidgets.idPrefix)\(model.name).\(item.id)" }
@@ -225,15 +240,16 @@ struct ScriptPopupRowView: View {
 struct ScriptIconView: View {
     let icon: ScriptIcon
     let size: CGFloat
+    var weight: Font.Weight = .semibold
 
     var body: some View {
         switch icon {
         case .symbol(let name):
             Image(systemName: name)
-                .font(.system(size: size, weight: .semibold))
+                .font(.system(size: size, weight: weight))
         case .text(let text):
             Text(text)
-                .font(.system(size: size, weight: .semibold))
+                .font(.system(size: size, weight: weight))
                 .fixedSize()
         case .app(let bundleID):
             image(Self.appIcon(bundleID))
