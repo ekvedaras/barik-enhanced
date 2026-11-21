@@ -122,7 +122,7 @@ private struct SpaceBadgePulse: View {
             if reduceMotion {
                 fill.opacity(0.4)
             } else {
-                fill.phaseAnimator([0.0, 0.55]) { view, opacity in
+                fill.phaseAnimator([0.0, 0.85]) { view, opacity in
                     view.opacity(opacity)
                 } animation: { _ in .easeInOut(duration: 1) }
             }
