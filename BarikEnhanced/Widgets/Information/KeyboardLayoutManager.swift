@@ -4,7 +4,7 @@ import Carbon
 import InputMethodKit
 
 /// Manages keyboard input source monitoring and switching.
-class KeyboardLayoutManager: ObservableObject {
+class KeyboardLayoutManager: NSObject, ObservableObject {
     static let shared = KeyboardLayoutManager()
 
     @Published var currentInputSource: String = "EN"
@@ -13,7 +13,8 @@ class KeyboardLayoutManager: ObservableObject {
     private var timer: Timer?
     private var inputSources: [TISInputSource] = []
     
-    private init() {
+    private override init() {
+        super.init()
         startMonitoring()
     }
     
@@ -28,6 +29,14 @@ class KeyboardLayoutManager: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
             self?.updateCurrentInputSource()
         }
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(selectedInputSourceDidChange),
+            name: NSNotification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String),
+            object: nil, suspensionBehavior: .deliverImmediately)
+    }
+
+    @objc private func selectedInputSourceDidChange() {
+        DispatchQueue.main.async { self.updateCurrentInputSource() }
     }
     
     private func stopMonitoring() {
