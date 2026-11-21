@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import AudioToolbox
 import CoreAudio
 import IOKit
 import IOKit.graphics
@@ -16,7 +17,7 @@ class AudioVisualManager: ObservableObject {
 
     private init() {
         audioObjectPropertyAddress = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyVolumeScalar,
+            mSelector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
             mScope: kAudioObjectPropertyScopeOutput,
             mElement: kAudioObjectPropertyElementMain
         )
@@ -32,7 +33,54 @@ class AudioVisualManager: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
             self?.updateStatus()
         }
+        listenForDefaultOutputDeviceChanges()
+        listenToDefaultOutputDevice()
         updateStatus()
+    }
+
+    private var listenedDeviceID: AudioDeviceID = kAudioObjectUnknown
+    private lazy var deviceListener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+        self?.updateStatus()
+    }
+
+    private func listenForDefaultOutputDeviceChanges() {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        AudioObjectAddPropertyListenerBlock(
+            AudioObjectID(kAudioObjectSystemObject), &address, DispatchQueue.main
+        ) { [weak self] _, _ in
+            self?.listenToDefaultOutputDevice()
+            self?.updateStatus()
+        }
+    }
+
+    /// Volume keys change the device's volume and mute properties; listening beats the 10 s poll.
+    /// The virtual main volume also exists on devices that only expose per-channel volume (Bluetooth headphones).
+    private func listenToDefaultOutputDevice() {
+        var deviceAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        var deviceID: AudioDeviceID = kAudioObjectUnknown
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        guard AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject), &deviceAddress, 0, nil, &size, &deviceID) == noErr,
+            deviceID != listenedDeviceID
+        else { return }
+
+        for selector in [kAudioHardwareServiceDeviceProperty_VirtualMainVolume, kAudioDevicePropertyMute] {
+            var address = AudioObjectPropertyAddress(
+                mSelector: selector,
+                mScope: kAudioObjectPropertyScopeOutput,
+                mElement: kAudioObjectPropertyElementMain)
+            if listenedDeviceID != kAudioObjectUnknown {
+                AudioObjectRemovePropertyListenerBlock(listenedDeviceID, &address, DispatchQueue.main, deviceListener)
+            }
+            AudioObjectAddPropertyListenerBlock(deviceID, &address, DispatchQueue.main, deviceListener)
+        }
+        listenedDeviceID = deviceID
     }
     
     private func stopMonitoring() {
@@ -80,7 +128,7 @@ class AudioVisualManager: ObservableObject {
             // Get volume level - using master volume property
             var volume: Float32 = 0.0
             propertySize = UInt32(MemoryLayout<Float32>.size)
-            propertyAddress.mSelector = kAudioDevicePropertyVolumeScalar
+            propertyAddress.mSelector = kAudioHardwareServiceDeviceProperty_VirtualMainVolume
             propertyAddress.mScope = kAudioObjectPropertyScopeOutput
             propertyAddress.mElement = kAudioObjectPropertyElementMain
             
@@ -156,7 +204,7 @@ class AudioVisualManager: ObservableObject {
         
         var volume = Float32(clampedLevel)
         propertySize = UInt32(MemoryLayout<Float32>.size)
-        propertyAddress.mSelector = kAudioDevicePropertyVolumeScalar
+        propertyAddress.mSelector = kAudioHardwareServiceDeviceProperty_VirtualMainVolume
         propertyAddress.mScope = kAudioObjectPropertyScopeOutput
         propertyAddress.mElement = kAudioObjectPropertyElementMain
         
