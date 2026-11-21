@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds Barik.app with SwiftPM only (no Xcode, no actool) and installs it to ~/Applications.
+# Builds Barik.app with SwiftPM only (no Xcode, no actool) into ~/Applications or the given dir (CI).
 # Usage: scripts/build-app.sh [destination-dir]
 set -euo pipefail
 

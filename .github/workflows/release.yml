@@ -1,0 +1,21 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/test.sh
+      - run: scripts/build-app.sh "$RUNNER_TEMP/dist"
+      # --norsrc: no AppleDouble ._ files, which break the signature once unzipped by anything but ditto
+      - run: ditto -c -k --norsrc --keepParent "$RUNNER_TEMP/dist/Barik.app" Barik.zip
+      - run: gh release create "$GITHUB_REF_NAME" Barik.zip --title "$GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
