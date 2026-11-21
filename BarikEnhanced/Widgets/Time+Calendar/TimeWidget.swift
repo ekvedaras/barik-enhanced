@@ -24,12 +24,28 @@ struct TimeWidget: View {
     private let timer = Timer.publish(every: 5, on: .main, in: .common)
         .autoconnect()
 
+    /// `calendar.events-inline = true` puts the next event left of the clock, so the widget fits a one-line bar.
+    var calendarEventsInline: Bool {
+        calendarConfig?["events-inline"]?.boolValue ?? false
+    }
+
+    private var nextEvent: EKEvent? {
+        calendarShowEvents ? calendarManager.nextEvent : nil
+    }
+
     var body: some View {
-        VStack(alignment: .trailing, spacing: 0) {
+        let layout = calendarEventsInline
+            ? AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
+            : AnyLayout(VStackLayout(alignment: .trailing, spacing: 0))
+        layout {
+            if calendarEventsInline, let nextEvent {
+                Text(eventText(for: nextEvent))
+                    .opacity(0.8)
+            }
             Text(formattedTime(pattern: format, from: currentTime))
                 .fontWeight(.semibold)
-            if let event = calendarManager.nextEvent, calendarShowEvents {
-                Text(eventText(for: event))
+            if !calendarEventsInline, let nextEvent {
+                Text(eventText(for: nextEvent))
                     .opacity(0.8)
                     .font(.subheadline)
             }
