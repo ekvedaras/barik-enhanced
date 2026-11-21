@@ -203,13 +203,25 @@ class SpacesViewModel: NSObject, ObservableObject, ConditionallyActivatableWidge
                 return
             }
 
-            let sortedSpaces = spaces.sorted { $0.id < $1.id }
             DispatchQueue.main.async {
+                let sortedSpaces = Self.arrange(spaces)
                 if sortedSpaces != self.spaces {
                     self.spaces = sortedSpaces
                 }
             }
         }
+    }
+
+    /// `space.order` comes first, the rest alphabetically. Spaces without windows
+    /// show only with `space.show-empty`, or while focused.
+    static func arrange(_ spaces: [AnySpace], config: ConfigData = ConfigManager.shared.globalWidgetConfig(for: "default.spaces")) -> [AnySpace] {
+        let spaceConfig = config["space"]?.dictionaryValue ?? [:]
+        let showEmpty = spaceConfig["show-empty"]?.boolValue ?? false
+        let order = spaceConfig["order"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        func rank(_ space: AnySpace) -> Int { order.firstIndex(of: space.id) ?? order.count }
+        return spaces
+            .filter { showEmpty || !$0.windows.isEmpty || $0.isFocused }
+            .sorted { (rank($0), $0.id) < (rank($1), $1.id) }
     }
 
     @objc private func didReceiveWorkspaceChange(_ notification: Notification) {
@@ -282,6 +294,20 @@ class IconCache {
     static let shared = IconCache()
     private let cache = NSCache<NSString, NSImage>()
     private init() {}
+    /// The bundle id finds apps whose process name differs from AeroSpace's app name (Zen runs as "zen").
+    func icon(bundleID: String?, appName: String?) -> NSImage? {
+        if let bundleID, !bundleID.isEmpty {
+            let key = "bundle:\(bundleID)" as NSString
+            if let cached = cache.object(forKey: key) { return cached }
+            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+                let icon = NSWorkspace.shared.icon(forFile: url.path)
+                cache.setObject(icon, forKey: key)
+                return icon
+            }
+        }
+        return appName.flatMap(icon(for:))
+    }
+
     func icon(for appName: String) -> NSImage? {
         if let cached = cache.object(forKey: appName as NSString) {
             return cached

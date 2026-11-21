@@ -69,11 +69,8 @@ class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
                 }
             }
         }
-        var resultSpaces = Array(spaceDict.values)
-        for i in 0..<resultSpaces.count {
-            resultSpaces[i].windows.sort { $0.id < $1.id }
-        }
-        return resultSpaces.filter { !$0.windows.isEmpty }
+        // Windows keep AeroSpace's list order; the view model orders and filters the spaces.
+        return Array(spaceDict.values)
     }
 
     func focusSpace(spaceId: String, needWindowFocus: Bool) {
@@ -151,7 +148,7 @@ class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
         guard
             let data = runAerospaceCommand(arguments: [
                 "list-windows", "--all", "--json", "--format",
-                "%{window-id} %{app-name} %{window-title} %{workspace}",
+                "%{window-id} %{app-name} %{app-bundle-id} %{window-title} %{workspace}",
             ])
         else {
             return nil
