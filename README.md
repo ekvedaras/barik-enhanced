@@ -58,6 +58,72 @@ Click the gear icon at the end of the bar to access:
 - **About** — credits and version info
 - **Quit** — close the app
 
+## This fork
+
+This fork adds shell-script widgets and a CLI to Barik Enhanced, and builds without Xcode (`scripts/build-app.sh`, SwiftPM only). Releases attach a ready-built `Barik.zip` (bundle id `com.ekvedaras.Barik`). Do not use the in-app update button: it installs upstream over the fork.
+
+### Script widgets
+
+Any `script.<name>` id in `displayed` runs a command and draws the JSON it prints.
+
+```toml
+[widgets]
+displayed = ["default.spaces", "spacer", "script.uptime", "default.time"]
+
+[widgets.script.uptime]
+command = "~/.config/barik/scripts/uptime.sh"
+mode = "poll"          # poll: run every `interval` seconds; stream: one JSON document per output line
+interval = 60          # 0 = only at start and on events
+events = ["uptime_change", "system_woke"]   # `barik trigger <event>` re-runs it
+
+[script]
+path = "/opt/homebrew/bin:/usr/bin:/bin"    # PATH for every script
+```
+
+```sh
+#!/bin/sh
+# ~/.config/barik/scripts/uptime.sh
+up=$(uptime | sed -E 's/.*up ([^,]*),.*/\1/')
+printf '{"items":[{"id":"up","icon":"sf:clock","label":"%s","color":"green","click":"open -b com.apple.ActivityMonitor"}]}\n' "$up"
+```
+
+Item fields: `id`, `icon` (`sf:<symbol>`, `app:<bundle id>`, `file:<path>`, `text:<chars>`), `label`, `color` (`accent`, `red`, ..., `#rrggbb`), `style` (`pill`/`plain`), `outline`, `joined`, `animation` (`none`/`pulse`/`shake`/`spin`), `tooltip`, `click`, `right_click`, `popup` (rows of `icon`, `label`, `color`, `click`). `{"items":[]}` shows nothing. A widget table with `space = "<workspace>"` draws its items inside that workspace's pill in the Spaces widget.
+
+### CLI
+
+```sh
+scripts/barik trigger <event>   # re-run scripts listening to <event>
+scripts/barik reload            # reload the config
+scripts/barik zen [on|off]      # toggle zen mode (no argument toggles)
+```
+
+The wrapper runs `Barik.app/Contents/MacOS/Barik`; `BARIK_APP` points it at another app path.
+
+### Zen mode
+
+```toml
+[zen]
+hide = ["default.cpuram", "script.uptime"]
+
+[zen.widgets.default.time]   # merged over [widgets.default.time] while zen is on
+format = "HH:mm"
+```
+
+Toggle with `barik zen`, a right click on the clock, or "Zen Mode" in the bar's context menu. The state survives restarts.
+
+### Overflow
+
+When the left section runs into the right one, script items that do not fit hide behind a `+N` pill; clicking it lists them in a popup.
+
+### Smaller changes
+
+- `default.spaces`: `space.order = ["A", "B"]` (listed first, rest alphabetical) and `space.show-empty = true` (AeroSpace).
+- `default.time`: `calendar.events-inline = true` puts the next event left of the clock; it turns accent 5 min before start.
+- `notch`: a spacer as wide as the screen's notch.
+- Spaces, volume and keyboard layout update on system notifications instead of polling.
+- Config writes follow a symlinked config file (stow, home-manager); the watcher survives the file being replaced.
+- Logs go to `~/Library/Logs/Barik/barik.log`.
+
 ## Installation
 
 ### Homebrew (Recommended)
