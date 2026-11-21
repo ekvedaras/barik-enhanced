@@ -279,6 +279,9 @@ struct MenuBarView: View {
         case "system-banner":
             SystemBannerWidget()
 
+        case let id where id.hasPrefix(ScriptWidgets.idPrefix):
+            ScriptWidget(name: String(id.dropFirst(ScriptWidgets.idPrefix.count)))
+
         default:
             Text("?\(item.id)?").foregroundColor(.red)
         }
