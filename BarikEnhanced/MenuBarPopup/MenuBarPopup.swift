@@ -100,8 +100,7 @@ class MenuBarPopup {
 
         let panel = panels[screenIndex]
         let screenFrame = screenFrame(for: screenIndex)
-        let localMidX = rect.midX - screenFrame.minX
-        let localMidY = rect.midY - screenFrame.minY
+        let anchorX = rect.midX - screenFrame.minX
         currentScreenIndex = screenIndex
 
         if panel.isKeyWindow, lastContentIdentifier == id {
@@ -135,34 +134,16 @@ class MenuBarPopup {
                 / 1000.0
             let duration = isContentChange ? baseDuration / 2 : baseDuration
             DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-                panel.contentView = FirstMouseHostingView(
-                    rootView:
-                        ZStack {
-                            MenuBarPopupView {
-                                content()
-                            }
-                            .position(x: localMidX, y: localMidY)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                )
-                takeFocus()
-            panel.makeKeyAndOrderFront(nil)
+                panel.contentView = hostingView(anchorX: anchorX, content: content)
+                    takeFocus()
+                panel.makeKeyAndOrderFront(nil)
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(
                         name: .willShowWindow, object: nil)
                 }
             }
         } else {
-            panel.contentView = FirstMouseHostingView(
-                rootView:
-                    ZStack {
-                        MenuBarPopupView {
-                            content()
-                        }
-                        .position(x: localMidX, y: localMidY)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            )
+            panel.contentView = hostingView(anchorX: anchorX, content: content)
             takeFocus()
             panel.makeKeyAndOrderFront(nil)
             DispatchQueue.main.async {
@@ -170,6 +151,21 @@ class MenuBarPopup {
                     name: .willShowWindow, object: nil)
             }
         }
+    }
+
+    private static func hostingView<Content: View>(
+        anchorX: CGFloat, content: @escaping () -> Content
+    ) -> NSView {
+        let experimental = ConfigManager.shared.config.experimental
+        return FirstMouseHostingView(
+            rootView: PopupPlacement(
+                anchorX: anchorX,
+                barHeight: experimental.foreground.resolveHeight(),
+                atBottom: experimental.position == .bottom
+            ) {
+                MenuBarPopupView { content() }
+            }
+        )
     }
 
     static func setup() {
@@ -264,5 +260,31 @@ class MenuBarPopup {
             }
             return NSScreen.screens[index].frame
         }
+    }
+}
+
+/// Puts the popup under its widget like a native menu bar extra: a small gap
+/// below the bar, centred on the widget, kept inside the screen.
+struct PopupPlacement: Layout {
+    let anchorX: CGFloat
+    let barHeight: CGFloat
+    let atBottom: Bool
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard let popup = subviews.first else { return }
+        let margin = PopupStyle.screenMargin
+        let ideal = popup.sizeThatFits(.unspecified)
+        let size = CGSize(
+            width: min(ideal.width, bounds.width - 2 * margin),
+            height: min(ideal.height, bounds.height - barHeight - PopupStyle.gapBelowBar))
+        let x = min(max(anchorX - size.width / 2, bounds.minX + margin), bounds.maxX - margin - size.width)
+        let y = atBottom
+            ? bounds.maxY - barHeight - PopupStyle.gapBelowBar - size.height
+            : bounds.minY + barHeight + PopupStyle.gapBelowBar
+        popup.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
     }
 }

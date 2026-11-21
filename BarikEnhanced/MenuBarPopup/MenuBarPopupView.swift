@@ -5,12 +5,8 @@ struct MenuBarPopupView<Content: View>: View {
     let isPreview: Bool
 
     @ObservedObject var configManager = ConfigManager.shared
-    var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
 
-    @State private var contentHeight: CGFloat = 0
-    @State private var viewFrame: CGRect = .zero
     @State private var animationValue: Double = 0.01
-    private var animated: Bool { isShowAnimation || isHideAnimation }
     @State private var isShowAnimation = false
     @State private var isHideAnimation = false
 
@@ -31,153 +27,85 @@ struct MenuBarPopupView<Content: View>: View {
 
     var body: some View {
         let isBottom = configManager.config.experimental.position == .bottom
-        
-        ZStack(alignment: isBottom ? .bottomTrailing : .topTrailing) {
-            content
-                .background(Color.black)
-                .cornerRadius(((1.0 - animationValue) * 1) + 40)
-                .padding(isBottom ? .bottom : .top, foregroundHeight + 5)
-                .offset(x: computedOffset, y: isBottom ? -computedYOffset : computedYOffset)
-                .shadow(radius: 30)
-                .blur(radius: (1.0 - (0.1 + 0.9 * animationValue)) * 20)
-                .scaleEffect(x: 0.2 + 0.8 * animationValue, y: animationValue)
-                .opacity(animationValue)
-                .transaction { transaction in
-                    if isHideAnimation {
-                        transaction.animation = .linear(duration: 0.1)
-                    }
+
+        content
+            .popupSurface()
+            .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
+            .blur(radius: (1.0 - (0.1 + 0.9 * animationValue)) * 20)
+            .scaleEffect(
+                x: 0.2 + 0.8 * animationValue, y: animationValue,
+                anchor: isBottom ? .bottom : .top)
+            .opacity(animationValue)
+            .transaction { transaction in
+                if isHideAnimation {
+                    transaction.animation = .linear(duration: 0.1)
                 }
-                .onReceive(willShowWindow) { _ in
-                    isShowAnimation = true
-                    withAnimation(
-                        .smooth(
-                            duration: Double(
-                                Constants
-                                    .menuBarPopupAnimationDurationInMilliseconds
-                            ) / 1000.0, extraBounce: 0.3)
-                    ) {
-                        animationValue = 1.0
-                    }
-                    DispatchQueue.main.asyncAfter(
-                        deadline: .now()
-                            + .milliseconds(
-                                Constants
-                                    .menuBarPopupAnimationDurationInMilliseconds
-                            )
-                    ) {
-                        isShowAnimation = false
-                    }
-                }
-                .onReceive(willHideWindow) { _ in
-                    isHideAnimation = true
-                    withAnimation(
-                        .interactiveSpring(
-                            duration: Double(
-                                Constants
-                                    .menuBarPopupAnimationDurationInMilliseconds
-                            ) / 1000.0)
-                    ) {
-                        animationValue = 0.01
-                    }
-                    DispatchQueue.main.asyncAfter(
-                        deadline: .now()
-                            + .milliseconds(
-                                Constants
-                                    .menuBarPopupAnimationDurationInMilliseconds
-                            )
-                    ) {
-                        isHideAnimation = false
-                    }
-                }
-                .onReceive(willChangeContent) { _ in
-                    isHideAnimation = true
-                    withAnimation(
-                        .spring(
-                            duration: Double(
-                                Constants
-                                    .menuBarPopupAnimationDurationInMilliseconds
-                            ) / 1000.0)
-                    ) {
-                        animationValue = 0.01
-                    }
-                    DispatchQueue.main.asyncAfter(
-                        deadline: .now()
-                            + .milliseconds(
-                                Constants
-                                    .menuBarPopupAnimationDurationInMilliseconds
-                            )
-                    ) {
-                        isHideAnimation = false
-                    }
-                }
-                .animation(
-                    .smooth(duration: 0.3), value: animated ? 0 : computedOffset
-                )
-                .animation(
-                    .smooth(duration: 0.3),
-                    value: animated ? 0 : computedYOffset
-                )
-        }
-        .background(
-            GeometryReader { geometry in
-                Color.clear
-                    .onAppear {
-                        DispatchQueue.main.async {
-                            viewFrame = geometry.frame(in: .global)
-                            contentHeight = geometry.size.height
-                        }
-                    }
-                    .onChange(of: geometry.size) { _, __ in
-                        viewFrame = geometry.frame(in: .global)
-                        contentHeight = geometry.size.height
-                    }
             }
-        )
-        .foregroundStyle(.white)
-        .preferredColorScheme(.dark)
-    }
-
-    var computedOffset: CGFloat {
-        // Get the screen for the current popup
-        let screens: [NSScreen]
-        let monitorMode = ConfigManager.shared.config.monitors.mode
-
-        switch monitorMode {
-        case .main:
-            screens = NSScreen.main.map { [$0] } ?? []
-        case .all:
-            screens = NSScreen.screens
-        }
-
-        let screenIndex = MenuBarPopup.currentScreenIndex ?? 0
-        guard screenIndex < screens.count else { return 0 }
-
-        let screen = screens[screenIndex]
-        let screenFrame = screen.frame
-
-        let W = viewFrame.width
-        let M = viewFrame.midX
-        let newLeft = (M - W / 2) - 20
-        let newRight = (M + W / 2) + 20
-
-        if newRight > screenFrame.maxX {
-            return screenFrame.maxX - newRight
-        } else if newLeft < screenFrame.minX {
-            return screenFrame.minX - newLeft
-        }
-        return 0
-    }
-
-    var computedYOffset: CGFloat {
-        let isBottom = configManager.config.experimental.position == .bottom
-        
-        if isBottom {
-            // For bottom positioning, use the original logic
-            return viewFrame.height / 2
-        } else {
-            // For top positioning, reduce the offset to bring popups closer
-            return viewFrame.height / 2 - 65  // Bring closer to top menu bar
-        }
+            .onReceive(willShowWindow) { _ in
+                isShowAnimation = true
+                withAnimation(
+                    .smooth(
+                        duration: Double(
+                            Constants
+                                .menuBarPopupAnimationDurationInMilliseconds
+                        ) / 1000.0, extraBounce: 0.3)
+                ) {
+                    animationValue = 1.0
+                }
+                DispatchQueue.main.asyncAfter(
+                    deadline: .now()
+                        + .milliseconds(
+                            Constants
+                                .menuBarPopupAnimationDurationInMilliseconds
+                        )
+                ) {
+                    isShowAnimation = false
+                }
+            }
+            .onReceive(willHideWindow) { _ in
+                isHideAnimation = true
+                withAnimation(
+                    .interactiveSpring(
+                        duration: Double(
+                            Constants
+                                .menuBarPopupAnimationDurationInMilliseconds
+                        ) / 1000.0)
+                ) {
+                    animationValue = 0.01
+                }
+                DispatchQueue.main.asyncAfter(
+                    deadline: .now()
+                        + .milliseconds(
+                            Constants
+                                .menuBarPopupAnimationDurationInMilliseconds
+                        )
+                ) {
+                    isHideAnimation = false
+                }
+            }
+            .onReceive(willChangeContent) { _ in
+                isHideAnimation = true
+                withAnimation(
+                    .spring(
+                        duration: Double(
+                            Constants
+                                .menuBarPopupAnimationDurationInMilliseconds
+                        ) / 1000.0)
+                ) {
+                    animationValue = 0.01
+                }
+                DispatchQueue.main.asyncAfter(
+                    deadline: .now()
+                        + .milliseconds(
+                            Constants
+                                .menuBarPopupAnimationDurationInMilliseconds
+                        )
+                ) {
+                    isHideAnimation = false
+                }
+            }
+            .foregroundStyle(.white)
+            .preferredColorScheme(.dark)
     }
 }
 
