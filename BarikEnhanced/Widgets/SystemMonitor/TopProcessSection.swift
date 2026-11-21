@@ -21,9 +21,8 @@ struct TopProcessSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("TOP CONSUMERS")
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white)
+                Text("Top Processes")
+                    .font(PopupStyle.titleFont)
                 Spacer()
                 Picker("", selection: $metric) {
                     ForEach(Metric.allCases, id: \.self) { metric in
@@ -31,13 +30,14 @@ struct TopProcessSection: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .controlSize(.small)
                 .labelsHidden()
                 .frame(width: 96)
             }
 
             if displayedProcesses.isEmpty {
                 Text("Sampling processes...")
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(PopupStyle.detailFont)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 8)
@@ -50,12 +50,10 @@ struct TopProcessSection: View {
                         }
                     }
                 }
-                .background(.white.opacity(0.04))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
 
             Text("Press ✕ twice to send SIGTERM. Unsaved work in that app may be lost.")
-                .font(.system(size: 9))
+                .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -64,13 +62,12 @@ struct TopProcessSection: View {
     private func processRow(_ process: TopProcess) -> some View {
         HStack(spacing: 7) {
             Text(String(process.id))
-                .font(.system(size: 9, design: .monospaced))
+                .font(.system(size: 10).monospacedDigit())
                 .foregroundStyle(.tertiary)
                 .frame(width: 34, alignment: .trailing)
 
             Text(process.name)
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(.white)
+                .font(PopupStyle.detailFont)
                 .lineLimit(1)
                 .truncationMode(.middle)
 
@@ -79,23 +76,22 @@ struct TopProcessSection: View {
             Text(metric == .cpu
                  ? String(format: "%.1f%%", process.cpuPercent)
                  : process.memoryText)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(metric == .cpu ? .green : .cyan)
+                .font(PopupStyle.detailFont.monospacedDigit())
+                .foregroundStyle(.secondary)
                 .frame(width: 62, alignment: .trailing)
 
             Button {
                 confirmKill(process)
             } label: {
                 Text(killCandidate == process.id ? "KILL?" : "✕")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .font(.system(size: 10, weight: .semibold))
                     .frame(width: 36, height: 16)
             }
             .buttonStyle(.plain)
             .foregroundStyle(killCandidate == process.id ? .red : .gray)
             .help("Send SIGTERM to \(process.name) (\(process.id))")
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.vertical, 3)
     }
 
     private func confirmKill(_ process: TopProcess) {

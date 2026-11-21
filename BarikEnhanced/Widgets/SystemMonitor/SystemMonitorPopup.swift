@@ -11,185 +11,80 @@ struct SystemMonitorPopup: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Header
+            VStack(alignment: .leading, spacing: PopupStyle.sectionSpacing) {
                 HStack {
-                    Image(systemName: "cpu")
-                        .font(.title2)
-                        .foregroundStyle(.white)
-                    Text("System Monitor")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white)
+                    Text("System Monitor").font(PopupStyle.titleFont)
                     Spacer()
                     HStack(spacing: 4) {
-                        Circle()
-                            .fill(.green)
-                            .frame(width: 5, height: 5)
-                        Text("LIVE 1s")
-                            .font(.system(
-                                size: 9,
-                                weight: .bold,
-                                design: .monospaced))
-                            .foregroundStyle(.green.opacity(0.85))
+                        Circle().fill(.green).frame(width: 5, height: 5)
+                        Text("Live").font(PopupStyle.detailFont).foregroundStyle(.secondary)
                     }
-                    Text(Date(), style: .time)
-                        .font(.caption)
-                        .foregroundStyle(.gray)
                 }
-                
-                // CPU Section with Chart
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("CPU Usage")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                        Spacer()
-                        Text("\(Int(systemMonitor.cpuLoad))%")
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundStyle(cpuColor)
-                    }
-                    
-                    // CPU Chart
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(.black.opacity(0.3))
-                            .frame(height: 60)
-                        
-                        CPUChart(data: systemMonitor.cpuHistory, color: cpuColor)
-                            .frame(height: 50)
-                            .padding(.horizontal, 8)
-                    }
-                    
-                    // CPU Breakdown
+
+                VStack(alignment: .leading, spacing: 8) {
+                    PopupHeader(title: "CPU", value: "\(Int(systemMonitor.cpuLoad))%", valueColor: cpuColor)
+                    CPUChart(data: systemMonitor.cpuHistory, color: cpuColor)
+                        .frame(height: 40)
                     HStack(spacing: 16) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("User")
-                                .font(.caption2)
-                                .foregroundStyle(.gray)
-                            Text("\(Int(systemMonitor.userLoad))%")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.white)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("System")
-                                .font(.caption2)
-                                .foregroundStyle(.gray)
-                            Text("\(Int(systemMonitor.systemLoad))%")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.white)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Idle")
-                                .font(.caption2)
-                                .foregroundStyle(.gray)
-                            Text("\(Int(systemMonitor.idleLoad))%")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.white)
-                        }
-                        
+                        breakdown("User", systemMonitor.userLoad)
+                        breakdown("System", systemMonitor.systemLoad)
+                        breakdown("Idle", systemMonitor.idleLoad)
                         Spacer()
                     }
                 }
-            
-            Divider()
-                .background(.gray.opacity(0.3))
-            
-                // RAM Section with Chart
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Memory Usage")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("\(Int(systemMonitor.ramUsage))%")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundStyle(ramColor)
-                            Text("\(String(format: "%.1f", usedRAM)) GB")
-                                .font(.caption)
-                                .foregroundStyle(.gray)
-                        }
-                    }
-                    
-                    // RAM Chart
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(.black.opacity(0.3))
-                            .frame(height: 60)
-                        
-                        RAMChart(data: systemMonitor.ramHistory, color: ramColor)
-                            .frame(height: 50)
-                            .padding(.horizontal, 8)
-                    }
-                    
-                    // Memory breakdown with visual bars
-                    VStack(spacing: 6) {
+                .popupTile()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    PopupHeader(
+                        title: "Memory",
+                        value: "\(String(format: "%.1f", usedRAM)) GB · \(Int(systemMonitor.ramUsage))%",
+                        valueColor: ramColor)
+                    RAMChart(data: systemMonitor.ramHistory, color: ramColor)
+                        .frame(height: 40)
+                    VStack(spacing: 4) {
                         MemoryBar(label: "Active", value: systemMonitor.activeRAM, total: systemMonitor.totalRAM, color: .blue)
                         MemoryBar(label: "Wired", value: systemMonitor.wiredRAM, total: systemMonitor.totalRAM, color: .orange)
                         MemoryBar(label: "Compressed", value: systemMonitor.compressedRAM, total: systemMonitor.totalRAM, color: .purple)
                     }
                 }
-                
-                Divider()
-                    .background(.gray.opacity(0.3))
-                
-                // Network Section: terminal-style, 1 Hz live
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("NET I/O")
-                            .font(.system(size: 13, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.white)
-                        Spacer()
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(.green)
-                                .frame(width: 4, height: 4)
-                            Text("LIVE · 1s")
-                                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                .foregroundStyle(.green.opacity(0.8))
-                        }
-                    }
+                .popupTile()
 
+                VStack(alignment: .leading, spacing: 8) {
+                    PopupHeader(title: "Network")
                     ioChannel(
-                        label: "TX",
-                        glyph: "▲",
+                        label: "Upload",
                         speed: systemMonitor.uploadSpeed,
                         history: systemMonitor.uploadHistory,
                         color: .green)
                     ioChannel(
-                        label: "RX",
-                        glyph: "▼",
+                        label: "Download",
                         speed: systemMonitor.downloadSpeed,
                         history: systemMonitor.downloadHistory,
                         color: .cyan)
                 }
-
-                Divider()
-                    .background(.gray.opacity(0.3))
+                .popupTile()
 
                 TopProcessSection(
                     cpuProcesses: systemMonitor.topCPUProcesses,
                     ramProcesses: systemMonitor.topRAMProcesses,
                     onKill: { systemMonitor.kill(process: $0) })
-                
+                    .popupTile()
             }
+            .padding(PopupStyle.padding)
         }
-        .padding(16)
-        .background(.black.opacity(0.9))
-        .cornerRadius(12)
         .frame(width: 320)
         .onAppear { startLiveUpdates() }
         .onDisappear { stopLiveUpdates() }
         .onReceive(willHideWindow) { _ in stopLiveUpdates() }
         .onReceive(willChangeContent) { _ in stopLiveUpdates() }
+    }
+
+    private func breakdown(_ name: String, _ load: Double) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(name).foregroundStyle(.secondary)
+            Text("\(Int(load))%").monospacedDigit()
+        }
+        .font(PopupStyle.detailFont)
     }
 
     /// Panels are only ordered out, so `onDisappear` is not guaranteed when the
@@ -213,37 +108,22 @@ struct SystemMonitorPopup: View {
 
     private func ioChannel(
         label: String,
-        glyph: String,
         speed: Double,
         history: [Double],
         color: Color
     ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text(glyph)
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                Text(label)
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.7))
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(label).foregroundStyle(.secondary)
                 Spacer()
-                Text(formatSpeed(speed))
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                Text(formatSpeed(speed)).monospacedDigit().foregroundStyle(color)
             }
-            .foregroundStyle(color)
-
+            .font(PopupStyle.detailFont)
             NetworkTrace(values: history, color: color)
-                .frame(height: 26)
+                .frame(height: 22)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(color.opacity(0.06))
-        .overlay {
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(color.opacity(0.18), lineWidth: 1)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
-    
+
     private var cpuColor: Color {
         let cpu = Int(systemMonitor.cpuLoad)
         if cpu >= 90 {
@@ -397,24 +277,24 @@ struct MemoryBar: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(label)
-                .font(.caption2)
-                .foregroundStyle(.gray)
+                .font(PopupStyle.detailFont)
+                .foregroundStyle(.secondary)
                 .frame(width: 70, alignment: .leading)
             
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(.gray.opacity(0.2))
-                    .frame(height: 6)
-                
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(color)
-                    .frame(width: max(2, percentage * 1.5), height: 6)
-                    .animation(.easeInOut(duration: 0.3), value: percentage)
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.gray.opacity(0.2))
+                    Capsule()
+                        .fill(color)
+                        .frame(width: max(2, geometry.size.width * percentage / 100))
+                        .animation(.easeInOut(duration: 0.3), value: percentage)
+                }
             }
+            .frame(height: 6)
             
             Text("\(String(format: "%.1f", value)) GB")
-                .font(.caption2)
-                .foregroundStyle(.white)
+                .font(PopupStyle.detailFont)
+                .monospacedDigit()
                 .frame(width: 50, alignment: .trailing)
         }
     }
