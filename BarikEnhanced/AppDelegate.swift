@@ -182,7 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         newPanel.backgroundColor = .clear
         newPanel.hasShadow = false
         newPanel.isReleasedWhenClosed = false
-        newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
         // Host the SwiftUI view inside a plain container: an NSHostingView with
         // empty content (the disabled background) reports a zero fitting size
         // and collapses the panel, hiding the background after it is enabled.

@@ -216,7 +216,7 @@ class MenuBarPopup {
                 newPanel.backgroundColor = .clear
                 newPanel.hasShadow = false
                 newPanel.isReleasedWhenClosed = false
-                newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+                newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
 
                 panels.append(newPanel)
             }
