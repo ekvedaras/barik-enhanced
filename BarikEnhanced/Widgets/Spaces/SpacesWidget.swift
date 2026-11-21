@@ -38,6 +38,7 @@ private struct SpaceView: View {
 
     var body: some View {
         let isFocused = space.windows.contains { $0.isFocused } || space.isFocused
+        let badgeModels = ScriptWidgets.shared.models(inSpace: space.id)
         HStack(spacing: 0) {
             Spacer().frame(width: 10)
             if showKey {
@@ -47,6 +48,9 @@ private struct SpaceView: View {
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer().frame(width: 5)
             }
+            ForEach(badgeModels, id: \.name) { model in
+                SpaceBadges(model: model)
+            }
             HStack(spacing: 2) {
                 ForEach(space.windows) { window in
                     WindowView(window: window, space: space)
@@ -55,6 +59,11 @@ private struct SpaceView: View {
             Spacer().frame(width: 10)
         }
         .frame(height: 30)
+        .background {
+            ForEach(badgeModels, id: \.name) { model in
+                SpaceBadgePulse(model: model)
+            }
+        }
         .background(
             foregroundHeight < 30 ?
             (isFocused
@@ -73,6 +82,50 @@ private struct SpaceView: View {
         .animation(.smooth, value: isHovered)
         .onHover { value in
             isHovered = value
+        }
+    }
+}
+
+/// Items of a `script.<name>` widget configured with `space = "<id>"`.
+private struct SpaceBadges: View {
+    @ObservedObject var model: ScriptWidgetModel
+
+    var body: some View {
+        ForEach(model.items) { item in
+            HStack(spacing: 3) {
+                if let icon = item.icon {
+                    ScriptIconView(icon: icon, size: 13)
+                }
+                if let label = item.label {
+                    Text(label)
+                        .font(.system(size: 12, weight: .semibold))
+                        .fixedSize()
+                }
+            }
+            .foregroundStyle(item.color?.style ?? AnyShapeStyle(.primary))
+            .help(item.tooltip ?? "")
+            .padding(.trailing, 5)
+            .transition(.blurReplace)
+        }
+    }
+}
+
+/// A badge with `animation = "pulse"` pulses the whole pill in its colour,
+/// like SketchyBar's blinking workspace.
+private struct SpaceBadgePulse: View {
+    @ObservedObject var model: ScriptWidgetModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        if let item = model.items.first(where: { $0.animation == .pulse }) {
+            let fill = Rectangle().fill(item.color?.style ?? AnyShapeStyle(Color.accentColor))
+            if reduceMotion {
+                fill.opacity(0.4)
+            } else {
+                fill.phaseAnimator([0.0, 0.55]) { view, opacity in
+                    view.opacity(opacity)
+                } animation: { _ in .easeInOut(duration: 1) }
+            }
         }
     }
 }

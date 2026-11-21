@@ -10,7 +10,7 @@ struct ScriptWidget: View {
     }
 
     var body: some View {
-        if !model.items.isEmpty {
+        if !model.items.isEmpty, ScriptWidgets.space(of: model.name) == nil {
             HStack(spacing: 4) {
                 ForEach(runs(of: model.items), id: \.first!.id) { run in
                     HStack(spacing: 1) {

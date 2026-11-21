@@ -120,6 +120,20 @@ final class ScriptWidgets: NSObject {
         return model
     }
 
+    /// `space = "<workspace>"` in `[widgets.script.<name>]` draws the widget's
+    /// items inside that workspace's pill of `default.spaces` instead of on their own.
+    static func space(of name: String) -> String? {
+        ConfigManager.shared.globalWidgetConfig(for: idPrefix + name)["space"]?.stringValue
+    }
+
+    func models(inSpace spaceID: String) -> [ScriptWidgetModel] {
+        ConfigManager.shared.config.rootToml.widgets.displayed
+            .filter { $0.id.hasPrefix(Self.idPrefix) }
+            .map { String($0.id.dropFirst(Self.idPrefix.count)) }
+            .filter { Self.space(of: $0) == spaceID }
+            .map(model(named:))
+    }
+
     func start() {
         configSubscription = ConfigManager.shared.$config
             .receive(on: DispatchQueue.main)
