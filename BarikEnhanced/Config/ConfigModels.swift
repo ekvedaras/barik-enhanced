@@ -8,6 +8,7 @@ struct RootToml: Decodable {
     var omniwm: OmniWMConfig?
     var experimental: ExperimentalConfig?
     var monitors: MonitorsConfig?
+    var script: ScriptRootConfig?
     var widgets: WidgetsSection
 
     init() {
