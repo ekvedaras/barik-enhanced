@@ -1,4 +1,4 @@
 #!/bin/sh
-# CLI for the running bar: `barik trigger <event>`, `barik reload`.
+# CLI for the running bar: `barik trigger <event>`, `barik reload`, `barik zen [on|off]`.
 # Runs the app binary, which posts a distributed notification and exits.
 exec "${BARIK_APP:-$HOME/Applications/Barik.app}/Contents/MacOS/Barik" "$@"

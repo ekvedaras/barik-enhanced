@@ -4,6 +4,7 @@ import AppKit
 struct MenuBarView: View {
     @ObservedObject var configManager = ConfigManager.shared
     @ObservedObject var menuBarMetrics = MenuBarMetrics.shared
+    @ObservedObject var zenMode = ZenMode.shared
     @State private var draggedItem: TomlWidgetItem?
     @State private var displayedItems: [TomlWidgetItem] = []
     @State private var settingsRect: CGRect = .zero
@@ -46,8 +47,10 @@ struct MenuBarView: View {
     }
 
     var body: some View {
-        let timeItems = displayedItems.filter { $0.id == "default.time" }
-        let regularItems = displayedItems.filter { $0.id != "default.time" }
+        let zen = configManager.config.rootToml.zen ?? ZenConfig()
+        let shownItems = zenMode.isOn ? displayedItems.filter { !zen.hides($0.id) } : displayedItems
+        let timeItems = shownItems.filter { $0.id == "default.time" }
+        let regularItems = shownItems.filter { $0.id != "default.time" }
         let (leftItems, rightItems) = splitItems(regularItems)
 
         let theme: ColorScheme? =
@@ -117,6 +120,7 @@ struct MenuBarView: View {
             Button("Edit Config...") {
                 openConfigFile()
             }
+            Toggle("Zen Mode", isOn: Binding(get: { zenMode.isOn }, set: { zenMode.set($0) }))
             Divider()
             Button("Quit Barik Enhanced") {
                 NSApp.terminate(nil)
@@ -161,8 +165,11 @@ struct MenuBarView: View {
 
     @ViewBuilder
     private func buildView(for item: TomlWidgetItem) -> some View {
+        let resolved = configManager.resolvedWidgetConfig(for: item)
         let config = ConfigProvider(
-            config: configManager.resolvedWidgetConfig(for: item))
+            config: zenMode.isOn
+                ? (configManager.config.rootToml.zen ?? ZenConfig()).apply(to: resolved, of: item.id)
+                : resolved)
 
         switch item.id {
         case "default.spaces":

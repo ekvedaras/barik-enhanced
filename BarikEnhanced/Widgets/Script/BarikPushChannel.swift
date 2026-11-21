@@ -1,10 +1,12 @@
 import Foundation
 
-/// `Barik trigger <event>` and `Barik reload`: the app binary run as a CLI
+/// `Barik trigger <event>`, `Barik reload` and `Barik zen [on|off]`: the app binary run as a CLI
 /// posts a distributed notification to the running bar and exits.
 enum BarikPushChannel {
     static let trigger = Notification.Name("com.ekvedaras.barik.trigger")
     static let reload = Notification.Name("com.ekvedaras.barik.reload")
+    /// Object: "on", "off", or nil to toggle.
+    static let zen = Notification.Name("com.ekvedaras.barik.zen")
     /// Posted by the bar itself after the Mac wakes from sleep.
     static let systemWokeEvent = "system_woke"
 
@@ -22,6 +24,14 @@ enum BarikPushChannel {
             exit(0)
         case "reload":
             center.postNotificationName(reload, object: nil, userInfo: nil, deliverImmediately: true)
+            exit(0)
+        case "zen":
+            let state = arguments.count > 2 ? arguments[2] : nil
+            guard arguments.count <= 3, state == nil || state == "on" || state == "off" else {
+                FileHandle.standardError.write(Data("usage: barik zen [on|off]\n".utf8))
+                exit(64)
+            }
+            center.postNotificationName(zen, object: state, userInfo: nil, deliverImmediately: true)
             exit(0)
         default:
             return

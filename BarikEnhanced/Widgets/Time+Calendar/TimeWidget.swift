@@ -73,6 +73,7 @@ struct TimeWidget: View {
         .background(.black.opacity(0.001))
         .contentShape(Rectangle())
         .monospacedDigit()
+        .background { RightClickCatcher { ZenMode.shared.toggle() } }
         .onTapGesture { showCalendarPopup() }
     }
 

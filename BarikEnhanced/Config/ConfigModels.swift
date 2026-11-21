@@ -9,6 +9,7 @@ struct RootToml: Decodable {
     var experimental: ExperimentalConfig?
     var monitors: MonitorsConfig?
     var script: ScriptRootConfig?
+    var zen: ZenConfig?
     var widgets: WidgetsSection
 
     init() {
