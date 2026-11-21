@@ -11,6 +11,7 @@ struct MenuBarView: View {
     @State private var rightSectionWidth: CGFloat = 180
     @State private var leftSectionFrame: CGRect = .zero
     @State private var leftScriptItems: [ScriptOverflow.Entry] = []
+    @State private var leftFixedFrames: [String: CGRect] = [:]
 
     /// Trailing reservation. Narrow screens get 220 pt clearance from macOS
     /// status icons; wide screens use only horizontal-padding so the bar
@@ -68,22 +69,42 @@ struct MenuBarView: View {
 
         let spacing = configManager.config.experimental.foreground.spacing
         let overflowing = ScriptOverflow.hidden(leftScriptItems, visibleMaxX: leftSectionFrame.maxX)
+        let badgeMinX = ScriptOverflow.badgeMinX(
+            hidden: overflowing,
+            visibleMaxX: leftSectionFrame.maxX,
+            shownMaxX: ScriptOverflow.shownMaxX(
+                hidden: overflowing, all: leftScriptItems,
+                fixed: Array(leftFixedFrames.values), sectionMinX: leftSectionFrame.minX),
+            spacing: spacing)
 
         ZStack(alignment: .topLeading) {
             HStack(spacing: spacing) {
                 ForEach(leftItems, id: \.instanceID) { item in
-                    draggableWidget(for: item)
+                    if item.id.hasPrefix("script.") {
+                        draggableWidget(for: item)
+                    } else {
+                        CappedWidth(maxWidth: roomForFixedWidget(item, overflowing: !overflowing.isEmpty, spacing: spacing)) {
+                            draggableWidget(for: item)
+                        }
+                        .background(
+                            GeometryReader { geometry in
+                                Color.clear.preference(
+                                    key: ScriptOverflow.FixedFramesKey.self,
+                                    value: [item.instanceID: geometry.frame(in: .global)])
+                            }
+                        )
+                    }
                 }
             }
             .environment(\.scriptOverflowHidden, Set(overflowing.map(\.key)))
             .onPreferenceChange(ScriptOverflow.FramesKey.self) { leftScriptItems = $0 }
+            .onPreferenceChange(ScriptOverflow.FixedFramesKey.self) { leftFixedFrames = $0 }
             .fixedSize(horizontal: true, vertical: false)
             .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .overlay(alignment: .leading) {
-                if let first = overflowing.first {
+                if let badgeMinX {
                     ScriptOverflowBadge(hidden: overflowing)
-                        .offset(x: min(first.frame.minX, leftSectionFrame.maxX - ScriptOverflow.badgeReserve)
-                            - leftSectionFrame.minX)
+                        .offset(x: badgeMinX - leftSectionFrame.minX)
                 }
             }
             .clipped()
@@ -172,6 +193,12 @@ struct MenuBarView: View {
         .onReceive(configManager.$config) { newConfig in
             displayedItems = newConfig.rootToml.widgets.displayed
         }
+    }
+
+    private func roomForFixedWidget(_ item: TomlWidgetItem, overflowing: Bool, spacing: CGFloat) -> CGFloat {
+        guard let frame = leftFixedFrames[item.instanceID], leftSectionFrame.width > 0 else { return .infinity }
+        return ScriptOverflow.room(
+            from: frame.minX, visibleMaxX: leftSectionFrame.maxX, overflowing: overflowing, spacing: spacing)
     }
 
     @ViewBuilder

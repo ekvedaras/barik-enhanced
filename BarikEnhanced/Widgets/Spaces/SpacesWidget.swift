@@ -7,15 +7,23 @@ struct SpacesWidget: View {
     var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
 
     var body: some View {
-        HStack(spacing: foregroundHeight < 30 ? 0 : BarStyle.pillSpacing) {
-            ForEach(viewModel.spaces) { space in
-                SpaceView(space: space)
-            }
+        // Short of room (the bar's left section is full), pills drop their window titles before anything overlaps.
+        ViewThatFits(in: .horizontal) {
+            pills(withTitles: true)
+            pills(withTitles: false)
         }
         .experimentalConfiguration(horizontalPadding: 5, cornerRadius: 10)
         .animation(.smooth(duration: 0.3), value: viewModel.spaces)
         .foregroundStyle(Color.foreground)
         .environmentObject(viewModel)
+    }
+
+    private func pills(withTitles: Bool) -> some View {
+        HStack(spacing: foregroundHeight < 30 ? 0 : BarStyle.pillSpacing) {
+            ForEach(viewModel.spaces) { space in
+                SpaceView(space: space, withTitles: withTitles)
+            }
+        }
     }
 }
 
@@ -33,6 +41,7 @@ private struct SpaceView: View {
     var showKey: Bool { spaceConfig["show-key"]?.boolValue ?? true }
 
     let space: AnySpace
+    let withTitles: Bool
 
     @State var isHovered = false
 
@@ -53,7 +62,7 @@ private struct SpaceView: View {
             }
             HStack(spacing: 2) {
                 ForEach(space.windows) { window in
-                    WindowView(window: window, space: space)
+                    WindowView(window: window, space: space, withTitle: withTitles)
                 }
             }
             Spacer().frame(width: BarStyle.pillPadding)
@@ -144,12 +153,13 @@ private struct WindowView: View {
         windowConfig["title"]?.dictionaryValue ?? [:]
     }
 
-    var showTitle: Bool { windowConfig["show-title"]?.boolValue ?? true }
+    var showTitle: Bool { withTitle && windowConfig["show-title"]?.boolValue ?? true }
     var maxLength: Int { titleConfig["max-length"]?.intValue ?? 50 }
     var alwaysDisplayAppTitleFor: [String] { titleConfig["always-display-app-name-for"]?.arrayValue?.filter({ $0.stringValue != nil }).map { $0.stringValue! } ?? [] }
 
     let window: AnyWindow
     let space: AnySpace
+    let withTitle: Bool
 
     @State var isHovered = false
 

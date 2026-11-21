@@ -19,6 +19,14 @@ enum ScriptOverflow {
         }
     }
 
+    /// Global frames of the left section's widgets that cannot hide in `+N` (spaces and other native widgets), by widget id.
+    struct FixedFramesKey: PreferenceKey {
+        static let defaultValue: [String: CGRect] = [:]
+        static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+            value.merge(nextValue()) { $1 }
+        }
+    }
+
     static let badgeReserve: CGFloat = 48
 
     /// Items that end past `visibleMaxX`, or past the room left for the badge once anything overflows.
@@ -26,6 +34,27 @@ enum ScriptOverflow {
         let sorted = entries.sorted { $0.frame.minX < $1.frame.minX }
         guard sorted.contains(where: { $0.frame.maxX > visibleMaxX }) else { return [] }
         return sorted.filter { $0.frame.maxX > visibleMaxX - badgeReserve }
+    }
+
+    /// Left edge of the `+N` pill: where the first hidden item began, pulled in to stay on screen,
+    /// but never over anything still shown (`shownMaxX` is the right edge of what is left of it).
+    static func badgeMinX(hidden: [Entry], visibleMaxX: CGFloat, shownMaxX: CGFloat, spacing: CGFloat) -> CGFloat? {
+        guard let first = hidden.first else { return nil }
+        return max(min(first.frame.minX, visibleMaxX - badgeReserve), shownMaxX + spacing)
+    }
+
+    /// Right edge of what stays visible left of the first hidden item: fixed widgets and shown script items.
+    static func shownMaxX(hidden: [Entry], all: [Entry], fixed: [CGRect], sectionMinX: CGFloat) -> CGFloat {
+        guard let first = hidden.first else { return sectionMinX }
+        let hiddenKeys = Set(hidden.map(\.key))
+        let shown = all.filter { !hiddenKeys.contains($0.key) }.map(\.frame) + fixed
+        return shown.filter { $0.minX < first.frame.minX }.map(\.maxX).max() ?? sectionMinX
+    }
+
+    /// Widest a fixed widget starting at `minX` may draw: up to the edge, or up to the `+N` pill when it shows.
+    /// Spaces truncate their window title to fit, like the native menu bar truncates app menus.
+    static func room(from minX: CGFloat, visibleMaxX: CGFloat, overflowing: Bool, spacing: CGFloat) -> CGFloat {
+        max(0, (overflowing ? visibleMaxX - badgeReserve - spacing : visibleMaxX) - minX)
     }
 }
 
@@ -38,6 +67,24 @@ extension EnvironmentValues {
     var scriptOverflowHidden: Set<String> {
         get { self[OverflowHiddenKey.self] }
         set { self[OverflowHiddenKey.self] = newValue }
+    }
+}
+
+/// Proposes at most `maxWidth` to its one subview when the subview's natural width is wider.
+struct CappedWidth: Layout {
+    let maxWidth: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        subviews.first?.sizeThatFits(childProposal(proposal, subviews)) ?? .zero
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: childProposal(proposal, subviews))
+    }
+
+    private func childProposal(_ proposal: ProposedViewSize, _ subviews: Subviews) -> ProposedViewSize {
+        guard let child = subviews.first, child.sizeThatFits(proposal).width > maxWidth else { return proposal }
+        return ProposedViewSize(width: maxWidth, height: proposal.height)
     }
 }
 
