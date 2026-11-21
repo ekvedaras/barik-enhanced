@@ -9,7 +9,6 @@ final class ConfigManager: ObservableObject {
     @Published private(set) var initError: String?
     
     private var fileWatchSource: DispatchSourceFileSystemObject?
-    private var fileDescriptor: CInt = -1
     private var configFilePath: String?
     private var debounceWorkItem: DispatchWorkItem?
 
@@ -55,6 +54,7 @@ final class ConfigManager: ObservableObject {
             let content = try String(contentsOfFile: path, encoding: .utf8)
             let decoder = TOMLDecoder()
             let rootToml = try decoder.decode(RootToml.self, from: content)
+            print("Config loaded:", path)
             DispatchQueue.main.async {
                 self.config = Config(rootToml: rootToml)
                 
@@ -178,36 +178,51 @@ final class ConfigManager: ObservableObject {
     private func startWatchingFile(at path: String) {
         stopWatchingFile()
 
-        fileDescriptor = open(path, O_EVTONLY)
-        if fileDescriptor == -1 { return }
+        let fd = open(path, O_EVTONLY)
+        if fd == -1 { return }
 
-        fileWatchSource = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fileDescriptor,
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
             eventMask: [.write, .delete, .rename],
-            queue: DispatchQueue.global()
+            queue: DispatchQueue.main
         )
 
-        fileWatchSource?.setEventHandler { [weak self] in
-            guard let self = self, let path = self.configFilePath else { return }
+        source.setEventHandler { [weak self, weak source] in
+            guard let self, let source else { return }
+            // Atomic saves (editors, git, our own writes) replace the inode this fd watches.
+            let fileReplaced = !source.data.isDisjoint(with: [.delete, .rename])
 
             self.debounceWorkItem?.cancel()
             let workItem = DispatchWorkItem { [weak self] in
-                guard let self = self else { return }
-                guard FileManager.default.fileExists(atPath: path) else { return }
-                self.parseConfigFile(at: path)
+                self?.reloadAfterFileEvent(at: path, reopen: fileReplaced, attemptsLeft: 10)
             }
             self.debounceWorkItem = workItem
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
         }
 
-        fileWatchSource?.setCancelHandler { [weak self] in
-            if let fd = self?.fileDescriptor, fd != -1 {
-                close(fd)
-                self?.fileDescriptor = -1
-            }
+        source.setCancelHandler {
+            close(fd)
         }
 
-        fileWatchSource?.resume()
+        fileWatchSource = source
+        source.resume()
+    }
+
+    private func reloadAfterFileEvent(at path: String, reopen: Bool, attemptsLeft: Int) {
+        guard FileManager.default.fileExists(atPath: path) else {
+            guard attemptsLeft > 0 else {
+                print("Config file disappeared, stopped watching:", path)
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.reloadAfterFileEvent(at: path, reopen: reopen, attemptsLeft: attemptsLeft - 1)
+            }
+            return
+        }
+        if reopen {
+            startWatchingFile(at: path)
+        }
+        parseConfigFile(at: path)
     }
 
     private func stopWatchingFile() {
