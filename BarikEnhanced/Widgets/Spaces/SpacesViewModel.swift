@@ -2,8 +2,10 @@ import AppKit
 import Combine
 import Foundation
 
-class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
+class SpacesViewModel: NSObject, ObservableObject, ConditionallyActivatableWidget {
     static let shared = SpacesViewModel()
+    /// Pushed by AeroSpace's `exec-on-workspace-change` through `barik trigger`.
+    static let workspaceChangeEvent = "aerospace_workspace_change"
     @Published var spaces: [AnySpace] = []
     private var timer: Timer?
     private var recoveryTimer: Timer?
@@ -20,7 +22,8 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
         case omniwm
     }
 
-    private init() {
+    private override init() {
+        super.init()
         setupNotifications()
         refreshProvider(force: true)
         // For now, always activate to ensure widgets work
@@ -68,6 +71,19 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
         ) { [weak self] _ in
             self?.forceRefresh()
         }
+
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.loadSpaces()
+        }
+
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(didReceiveWorkspaceChange(_:)),
+            name: BarikPushChannel.trigger, object: Self.workspaceChangeEvent,
+            suspensionBehavior: .deliverImmediately)
 
         NotificationCenter.default.addObserver(
             forName: .NSCalendarDayChanged,
@@ -169,7 +185,7 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
     private func loadSpaces() {
         refreshProvider(force: false)
 
-        DispatchQueue.global(qos: .background).async { [weak self] in
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             guard let provider = self.provider else {
                 DispatchQueue.main.async {
@@ -194,6 +210,10 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
                 }
             }
         }
+    }
+
+    @objc private func didReceiveWorkspaceChange(_ notification: Notification) {
+        loadSpaces()
     }
 
     func forceRefresh() {
