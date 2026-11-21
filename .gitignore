@@ -224,3 +224,7 @@ build-*/
 *.bak.app
 PRD-*.md
 .claude/
+
+# SwiftPM build (Package.swift)
+.build/
+.swiftpm/
