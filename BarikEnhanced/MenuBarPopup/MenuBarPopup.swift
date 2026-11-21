@@ -276,15 +276,17 @@ struct PopupPlacement: Layout {
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         guard let popup = subviews.first else { return }
+        let frame = frame(for: popup.sizeThatFits(.unspecified), in: bounds)
+        popup.place(at: frame.origin, proposal: ProposedViewSize(frame.size))
+    }
+
+    func frame(for ideal: CGSize, in bounds: CGRect) -> CGRect {
         let margin = PopupStyle.screenMargin
-        let ideal = popup.sizeThatFits(.unspecified)
-        let size = CGSize(
-            width: min(ideal.width, bounds.width - 2 * margin),
-            height: min(ideal.height, bounds.height - barHeight - PopupStyle.gapBelowBar))
-        let x = min(max(anchorX - size.width / 2, bounds.minX + margin), bounds.maxX - margin - size.width)
-        let y = atBottom
-            ? bounds.maxY - barHeight - PopupStyle.gapBelowBar - size.height
-            : bounds.minY + barHeight + PopupStyle.gapBelowBar
-        popup.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+        let gap = PopupStyle.gapBelowBar
+        let width = min(ideal.width, bounds.width - 2 * margin)
+        let height = min(ideal.height, bounds.height - barHeight - gap)
+        let x = min(max(anchorX - width / 2, bounds.minX + margin), bounds.maxX - margin - width)
+        let y = atBottom ? bounds.maxY - barHeight - gap - height : bounds.minY + barHeight + gap
+        return CGRect(x: x, y: y, width: width, height: height)
     }
 }
