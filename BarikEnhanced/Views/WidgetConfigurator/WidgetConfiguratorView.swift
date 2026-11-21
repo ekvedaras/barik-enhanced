@@ -153,65 +153,13 @@ struct WidgetConfiguratorView: View {
     }
 
     private func applyChanges() {
-        // Build TOML array string
-        let items = activeWidgetIDs.map { id -> String in
-            return "\"\(id)\""
-        }
-        let arrayStr = "[\n    " + items.joined(separator: ",\n    ") + "\n]"
-
-        // Update config file directly
-        guard let path = getConfigFilePath() else { return }
         do {
-            let content = try String(contentsOfFile: path, encoding: .utf8)
-            let updated = replaceDisplayedWidgets(in: content, with: arrayStr)
-            try updated.write(toFile: path, atomically: true, encoding: .utf8)
+            try configManager.saveDisplayedWidgets(activeWidgetIDs)
             // Force immediate reload — don't wait for file watcher
             configManager.reloadConfig()
         } catch {
             print("Error saving widget config: \(error)")
         }
-    }
-
-    private func getConfigFilePath() -> String? {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let path1 = "\(home)/.barik-config.toml"
-        let path2 = "\(home)/.config/barik/config.toml"
-        if FileManager.default.fileExists(atPath: path1) { return path1 }
-        if FileManager.default.fileExists(atPath: path2) { return path2 }
-        return nil
-    }
-
-    private func replaceDisplayedWidgets(in content: String, with newArray: String) -> String {
-        // Find the displayed = [ ... ] block and replace it
-        var lines = content.components(separatedBy: "\n")
-        var startIndex: Int?
-        var endIndex: Int?
-        var bracketCount = 0
-
-        for (i, line) in lines.enumerated() {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("displayed") && trimmed.contains("[") {
-                startIndex = i
-                bracketCount = trimmed.filter({ $0 == "[" }).count - trimmed.filter({ $0 == "]" }).count
-                if bracketCount <= 0 {
-                    endIndex = i
-                    break
-                }
-            } else if startIndex != nil && endIndex == nil {
-                bracketCount += trimmed.filter({ $0 == "[" }).count - trimmed.filter({ $0 == "]" }).count
-                if bracketCount <= 0 {
-                    endIndex = i
-                    break
-                }
-            }
-        }
-
-        if let start = startIndex, let end = endIndex {
-            let replacement = "displayed = " + newArray
-            lines.replaceSubrange(start...end, with: [replacement])
-        }
-
-        return lines.joined(separator: "\n")
     }
 }
 

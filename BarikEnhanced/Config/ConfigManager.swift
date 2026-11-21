@@ -216,26 +216,33 @@ final class ConfigManager: ObservableObject {
     }
 
     func updateConfigValue(key: String, newValue: String, wrapInQuotes: Bool = true) {
-        guard let path = configFilePath else {
-            print("Config file path is not set")
-            return
-        }
         do {
-            let currentText = try String(contentsOfFile: path, encoding: .utf8)
-            let updatedText = updatedTOMLString(
-                original: currentText,
-                key: key,
-                newValue: newValue,
-                wrapInQuotes: wrapInQuotes
-            )
-            try updatedText.write(
-                toFile: path, atomically: false, encoding: .utf8)
-            DispatchQueue.main.async {
-                self.parseConfigFile(at: path)
+            try rewriteConfig {
+                updatedTOMLString(
+                    original: $0,
+                    key: key,
+                    newValue: newValue,
+                    wrapInQuotes: wrapInQuotes
+                )
             }
+            reloadConfig()
         } catch {
             print("Error updating config:", error)
         }
+    }
+
+    func saveDisplayedWidgets(_ ids: [String]) throws {
+        let widgetStrings = ids.map { "\"\($0)\"" }
+        let arrayStr = "[\n    " + widgetStrings.joined(separator: ",\n    ") + "\n]"
+        try rewriteConfig { replaceDisplayedWidgets(in: $0, with: arrayStr) }
+    }
+
+    /// Writes to the symlink's target, so a dotfiles (stow) symlink at the config path survives.
+    private func rewriteConfig(_ transform: (String) -> String) throws {
+        guard let path = configFilePath else { throw CocoaError(.fileNoSuchFile) }
+        let target = URL(fileURLWithPath: path).resolvingSymlinksInPath()
+        let content = try String(contentsOf: target, encoding: .utf8)
+        try transform(content).write(to: target, atomically: true, encoding: .utf8)
     }
 
     func updatedTOMLString(
@@ -335,21 +342,14 @@ final class ConfigManager: ObservableObject {
     }
 
     func toggleWidget(_ widgetId: String) {
-        guard let path = configFilePath else { return }
+        var displayedIds = config.rootToml.widgets.displayed.map(\.id)
+        if let index = displayedIds.firstIndex(of: widgetId) {
+            displayedIds.remove(at: index)
+        } else {
+            displayedIds.append(widgetId)
+        }
         do {
-            let content = try String(contentsOfFile: path, encoding: .utf8)
-            var displayedIds = config.rootToml.widgets.displayed.map(\.id)
-
-            if let index = displayedIds.firstIndex(of: widgetId) {
-                displayedIds.remove(at: index)
-            } else {
-                displayedIds.append(widgetId)
-            }
-
-            let widgetStrings = displayedIds.map { "\"\($0)\"" }
-            let arrayStr = "[\n    " + widgetStrings.joined(separator: ",\n    ") + "\n]"
-            let updated = replaceDisplayedWidgets(in: content, with: arrayStr)
-            try updated.write(toFile: path, atomically: true, encoding: .utf8)
+            try saveDisplayedWidgets(displayedIds)
         } catch {
             print("Error toggling widget: \(error)")
         }

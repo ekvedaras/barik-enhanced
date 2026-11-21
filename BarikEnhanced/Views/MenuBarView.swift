@@ -298,56 +298,11 @@ struct MenuBarView: View {
     // MARK: - Config Persistence
 
     private func saveWidgetOrder(_ items: [TomlWidgetItem]) {
-        guard let path = getConfigFilePath() else { return }
         do {
-            let content = try String(contentsOfFile: path, encoding: .utf8)
-            let widgetStrings = items.map { "\"\($0.id)\"" }
-            let arrayStr = "[\n    " + widgetStrings.joined(separator: ",\n    ") + "\n]"
-            let updated = replaceDisplayedWidgets(in: content, with: arrayStr)
-            try updated.write(toFile: path, atomically: true, encoding: .utf8)
+            try ConfigManager.shared.saveDisplayedWidgets(items.map(\.id))
         } catch {
             print("Error saving widget order: \(error)")
         }
-    }
-
-    private func getConfigFilePath() -> String? {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let path1 = "\(home)/.barik-config.toml"
-        let path2 = "\(home)/.config/barik/config.toml"
-        if FileManager.default.fileExists(atPath: path1) { return path1 }
-        if FileManager.default.fileExists(atPath: path2) { return path2 }
-        return nil
-    }
-
-    private func replaceDisplayedWidgets(in content: String, with newArray: String) -> String {
-        var lines = content.components(separatedBy: "\n")
-        var startIndex: Int?
-        var endIndex: Int?
-        var bracketCount = 0
-
-        for (i, line) in lines.enumerated() {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("displayed") && trimmed.contains("[") {
-                startIndex = i
-                bracketCount = trimmed.filter({ $0 == "[" }).count - trimmed.filter({ $0 == "]" }).count
-                if bracketCount <= 0 {
-                    endIndex = i
-                    break
-                }
-            } else if startIndex != nil && endIndex == nil {
-                bracketCount += trimmed.filter({ $0 == "[" }).count - trimmed.filter({ $0 == "]" }).count
-                if bracketCount <= 0 {
-                    endIndex = i
-                    break
-                }
-            }
-        }
-
-        if let start = startIndex, let end = endIndex {
-            lines.replaceSubrange(start...end, with: ["displayed = " + newArray])
-        }
-
-        return lines.joined(separator: "\n")
     }
 }
 
