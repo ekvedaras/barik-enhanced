@@ -57,11 +57,12 @@ extension Dictionary where Key == String, Value == TOMLValue {
 }
 
 /// Zen mode on or off for the running bar. Toggled by `barik zen [on|off]`,
-/// a right click on the clock, or the bar's context menu. Not persisted.
+/// a right click on the clock, or the bar's context menu. Survives restarts (UserDefaults).
 final class ZenMode: ObservableObject {
     static let shared = ZenMode()
+    private static let defaultsKey = "zenMode"
 
-    @Published private(set) var isOn = false
+    @Published private(set) var isOn = UserDefaults.standard.bool(forKey: defaultsKey)
 
     private init() {
         DistributedNotificationCenter.default().addObserver(
@@ -73,6 +74,7 @@ final class ZenMode: ObservableObject {
         guard on != isOn else { return }
         print("[zen] \(on ? "on" : "off")")
         withAnimation(.smooth(duration: 0.3)) { isOn = on }
+        UserDefaults.standard.set(on, forKey: Self.defaultsKey)
     }
 
     func toggle() {
