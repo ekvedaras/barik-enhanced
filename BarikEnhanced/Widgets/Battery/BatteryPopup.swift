@@ -5,22 +5,18 @@ struct BatteryPopup: View {
     @ObservedObject private var lowPowerMode = LowPowerMode.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Battery").font(.system(size: 13, weight: .semibold))
-                Spacer()
-                Text("\(batteryManager.batteryLevel)%")
-                    .font(.system(size: 13))
-                    .foregroundStyle(batteryColor)
+        VStack(alignment: .leading, spacing: PopupStyle.sectionSpacing) {
+            VStack(alignment: .leading, spacing: 4) {
+                PopupHeader(title: "Battery", value: "\(batteryManager.batteryLevel)%", valueColor: batteryColor)
+                Text(powerSource)
+                    .font(PopupStyle.detailFont)
+                    .foregroundStyle(.secondary)
             }
-            Text(powerSource)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Label {
-                        Text("Low Power Mode").font(.system(size: 13))
+                        Text("Low Power Mode").font(PopupStyle.bodyFont)
                     } icon: {
                         Image(systemName: "battery.50percent")
                             .foregroundStyle(lowPowerMode.isOn ? .yellow : .white)
@@ -36,14 +32,14 @@ struct BatteryPopup: View {
                 }
                 if let failure = lowPowerMode.failure {
                     Text(failure)
-                        .font(.system(size: 11))
+                        .font(PopupStyle.detailFont)
                         .foregroundStyle(.orange)
                 }
             }
             .popupTile()
         }
         .padding(PopupStyle.padding)
-        .frame(width: 260)
+        .frame(width: PopupStyle.width)
     }
 
     private var powerSource: String {
@@ -60,7 +56,7 @@ struct BatteryPopup: View {
             } else if batteryManager.batteryLevel <= 20 {
                 return .yellow
             } else {
-                return .white
+                return .primary
             }
         }
     }

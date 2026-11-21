@@ -44,10 +44,11 @@ struct CalendarPopup: View {
 
 struct CalendarBoxPopup: View {
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             Text(currentMonthYear)
-                .font(.title2)
-                .padding(.bottom, 25)
+                .font(PopupStyle.titleFont)
+                .padding(.horizontal, 4)
+                .padding(.bottom, PopupStyle.sectionSpacing)
             WeekdayHeaderView()
             CalendarDaysView(
                 weeks: weeks,
@@ -55,8 +56,8 @@ struct CalendarBoxPopup: View {
                 currentMonth: currentMonth
             )
         }
-        .padding(30)
-        .fontWeight(.semibold)
+        .padding(PopupStyle.padding)
+        .font(PopupStyle.bodyFont)
         .foregroundStyle(.white)
     }
 }
@@ -69,10 +70,11 @@ struct CalendarVerticalPopup: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             Text(currentMonthYear)
-                .font(.title2)
-                .padding(.bottom, 25)
+                .font(PopupStyle.titleFont)
+                .padding(.horizontal, 4)
+                .padding(.bottom, PopupStyle.sectionSpacing)
             WeekdayHeaderView()
             CalendarDaysView(
                 weeks: weeks,
@@ -93,11 +95,10 @@ struct CalendarVerticalPopup: View {
                 )
             }
             .frame(width: 255)
-            .padding(.top, 20)
+            .padding(.top, PopupStyle.sectionSpacing)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 30)
-        .fontWeight(.semibold)
+        .padding(PopupStyle.padding)
+        .font(PopupStyle.bodyFont)
         .foregroundStyle(.white)
     }
 }
@@ -113,8 +114,9 @@ struct CalendarHorizontalPopup: View {
         HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(currentMonthYear)
-                    .font(.title2)
-                    .padding(.bottom, 25)
+                    .font(PopupStyle.titleFont)
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, PopupStyle.sectionSpacing)
                     .fixedSize(horizontal: true, vertical: false)
                 WeekdayHeaderView()
                 CalendarDaysView(
@@ -136,11 +138,10 @@ struct CalendarHorizontalPopup: View {
                 )
             }
             .frame(width: 255)
-            .padding(.leading, 30)
+            .padding(.leading, PopupStyle.padding)
         }
-        .padding(.horizontal, 30)
-        .padding(.vertical, 30)
-        .fontWeight(.semibold)
+        .padding(PopupStyle.padding)
+        .font(PopupStyle.bodyFont)
         .foregroundStyle(.white)
     }
 }
@@ -308,8 +309,8 @@ private struct EventListView: View {
         if !events.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .font(.subheadline)
-                    .foregroundStyle(.gray)
+                    .font(PopupStyle.detailFont)
+                    .foregroundStyle(.secondary)
                 ForEach(events, id: \.eventIdentifier) { event in
                     EventRow(event: event)
                 }
@@ -344,11 +345,10 @@ private struct EventRow: View {
                 .clipShape(Capsule())
             VStack(alignment: .leading) {
                 Text(event.title)
-                    .font(.headline)
+                    .font(PopupStyle.bodyFont.weight(.medium))
                     .lineLimit(1)
                 Text(eventTime)
-                    .font(.caption)
-                    .fontWeight(.regular)
+                    .font(PopupStyle.detailFont)
                     .lineLimit(1)
             }
             Spacer()

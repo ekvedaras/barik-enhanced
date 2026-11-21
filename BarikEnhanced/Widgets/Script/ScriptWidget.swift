@@ -190,7 +190,7 @@ struct ScriptPopupView: View {
                             .foregroundStyle(item.color?.style ?? AnyShapeStyle(.white))
                     }
                     if let label = item.label {
-                        Text(label).font(.headline)
+                        Text(label).font(PopupStyle.titleFont)
                     }
                 }
                 .padding(.horizontal, 10)

@@ -8,12 +8,20 @@ enum PopupStyle {
     static let screenMargin: CGFloat = 8
     static let cornerRadius: CGFloat = 22
     /// Inset between a popup's edge and its content.
-    static let padding: CGFloat = 14
+    static let padding: CGFloat = 20
     /// Inset of a menu-like popup, whose rows carry their own padding.
-    static let menuInset: CGFloat = 6
+    static let menuInset: CGFloat = 10
     static let rowSpacing: CGFloat = 2
+    /// Width of a popup that holds a header and a few tiles.
+    static let width: CGFloat = 280
+    /// Space between a popup's header, tiles and sections.
+    static let sectionSpacing: CGFloat = 12
     static let rowCornerRadius: CGFloat = 10
     static let tileCornerRadius: CGFloat = 16
+
+    static let titleFont = Font.system(size: 13, weight: .semibold)
+    static let bodyFont = Font.system(size: 13)
+    static let detailFont = Font.system(size: 11)
 
     static var surfaceShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -69,5 +77,54 @@ private struct PopupRowModifier: ViewModifier {
             )
             .contentShape(Rectangle())
             .onHover { hovered = $0 }
+    }
+}
+
+/// A popup's first line: a bold title and, on the right, its current value.
+struct PopupHeader: View {
+    let title: String
+    var value: String? = nil
+    var valueColor: Color = .primary
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title).font(PopupStyle.titleFont)
+            Spacer(minLength: 12)
+            if let value {
+                Text(value)
+                    .font(PopupStyle.bodyFont)
+                    .monospacedDigit()
+                    .foregroundStyle(valueColor)
+            }
+        }
+    }
+}
+
+/// A menu row; an icon of nil leaves its column empty, like an unchecked menu item.
+struct PopupMenuItem: View {
+    let icon: String?
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon ?? "circle")
+                    .font(PopupStyle.bodyFont)
+                    .opacity(icon == nil ? 0 : 0.8)
+                    .frame(width: 18)
+
+                Text(title)
+                    .font(PopupStyle.bodyFont)
+            }
+            .popupRow()
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct PopupMenuDivider: View {
+    var body: some View {
+        Divider().padding(.horizontal, 10).padding(.vertical, 4)
     }
 }
