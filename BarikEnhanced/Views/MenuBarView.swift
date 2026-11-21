@@ -8,6 +8,9 @@ struct MenuBarView: View {
     @State private var draggedItem: TomlWidgetItem?
     @State private var displayedItems: [TomlWidgetItem] = []
     @State private var settingsRect: CGRect = .zero
+    @State private var rightSectionWidth: CGFloat = 180
+    @State private var leftSectionFrame: CGRect = .zero
+    @State private var leftScriptItems: [ScriptOverflow.Entry] = []
 
     /// Trailing reservation. Narrow screens get 220 pt clearance from macOS
     /// status icons; wide screens use only horizontal-padding so the bar
@@ -63,53 +66,82 @@ struct MenuBarView: View {
                 .none
             }
 
+        let spacing = configManager.config.experimental.foreground.spacing
+        let overflowing = ScriptOverflow.hidden(leftScriptItems, visibleMaxX: leftSectionFrame.maxX)
+
         ZStack(alignment: .topLeading) {
-            HStack(spacing: configManager.config.experimental.foreground.spacing) {
+            HStack(spacing: spacing) {
                 ForEach(leftItems, id: \.instanceID) { item in
                     draggableWidget(for: item)
                 }
             }
+            .environment(\.scriptOverflowHidden, Set(overflowing.map(\.key)))
+            .onPreferenceChange(ScriptOverflow.FramesKey.self) { leftScriptItems = $0 }
+            .fixedSize(horizontal: true, vertical: false)
+            .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .overlay(alignment: .leading) {
+                if let first = overflowing.first {
+                    ScriptOverflowBadge(hidden: overflowing)
+                        .offset(x: min(first.frame.minX, leftSectionFrame.maxX - ScriptOverflow.badgeReserve)
+                            - leftSectionFrame.minX)
+                }
+            }
             .clipped()
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .padding(.trailing, 180)
+            .background(
+                GeometryReader { geometry in
+                    Color.clear
+                        .onAppear { leftSectionFrame = geometry.frame(in: .global) }
+                        .onChange(of: geometry.frame(in: .global)) { _, newFrame in leftSectionFrame = newFrame }
+                }
+            )
+            .padding(.trailing, rightSectionWidth + spacing)
 
-            HStack(spacing: configManager.config.experimental.foreground.spacing) {
+            HStack(spacing: spacing) {
                 Spacer(minLength: 0)
 
-                ForEach(rightItems, id: \.instanceID) { item in
-                    draggableWidget(for: item)
-                }
-
-                if !timeItems.isEmpty {
-                    ForEach(timeItems, id: \.instanceID) { item in
+                HStack(spacing: spacing) {
+                    ForEach(rightItems, id: \.instanceID) { item in
                         draggableWidget(for: item)
-                            .fixedSize(horizontal: true, vertical: false)
                     }
-                }
 
-                if !displayedItems.contains(where: { $0.id == "system-banner" }) {
-                    SystemBannerWidget(withLeftPadding: false)
-                }
-
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.white.opacity(0.4))
-                    .frame(maxHeight: .infinity)
-                    .background(
-                        GeometryReader { geometry in
-                            Color.clear
-                                .onAppear { settingsRect = geometry.frame(in: .global) }
-                                .onChange(of: geometry.frame(in: .global)) { _, newState in settingsRect = newState }
-                        }
-                    )
-                    .background(.black.opacity(0.001))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        MenuBarPopup.show(rect: settingsRect, id: "settings") {
-                            SettingsMenuView()
+                    if !timeItems.isEmpty {
+                        ForEach(timeItems, id: \.instanceID) { item in
+                            draggableWidget(for: item)
+                                .fixedSize(horizontal: true, vertical: false)
                         }
                     }
-                    .padding(.leading, 8)
+
+                    if !displayedItems.contains(where: { $0.id == "system-banner" }) {
+                        SystemBannerWidget(withLeftPadding: false)
+                    }
+
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.4))
+                        .frame(maxHeight: .infinity)
+                        .background(
+                            GeometryReader { geometry in
+                                Color.clear
+                                    .onAppear { settingsRect = geometry.frame(in: .global) }
+                                    .onChange(of: geometry.frame(in: .global)) { _, newState in settingsRect = newState }
+                            }
+                        )
+                        .background(.black.opacity(0.001))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            MenuBarPopup.show(rect: settingsRect, id: "settings") {
+                                SettingsMenuView()
+                            }
+                        }
+                        .padding(.leading, 8)
+                }
+                .background(
+                    GeometryReader { geometry in
+                        Color.clear
+                            .onAppear { rightSectionWidth = geometry.size.width }
+                            .onChange(of: geometry.size.width) { _, width in rightSectionWidth = width }
+                    }
+                )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
         }

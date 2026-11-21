@@ -51,7 +51,13 @@ private struct ScriptItemView: View {
 
     @ObservedObject private var configManager = ConfigManager.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scriptOverflowHidden) private var overflowHidden
     @State private var rect: CGRect = .zero
+
+    private var overflowEntry: ScriptOverflow.Entry {
+        ScriptOverflow.Entry(name: model.name, itemID: item.id, frame: rect)
+    }
+    private var isOverflowing: Bool { overflowHidden.contains(overflowEntry.key) }
 
     private var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
     private var pillHeight: CGFloat { min(26, max(16, foregroundHeight - 8)) }
@@ -91,16 +97,22 @@ private struct ScriptItemView: View {
                     Color.clear
                         .onAppear { rect = geometry.frame(in: .global) }
                         .onChange(of: geometry.frame(in: .global)) { _, newRect in rect = newRect }
+                        .preference(
+                            key: ScriptOverflow.FramesKey.self,
+                            value: [ScriptOverflow.Entry(
+                                name: model.name, itemID: item.id, frame: geometry.frame(in: .global))])
                 }
             )
             .background {
-                if let rightClickAction {
+                if let rightClickAction, !isOverflowing {
                     RightClickCatcher(action: rightClickAction)
                 }
             }
             .contentShape(Rectangle())
             .onTapGesture { leftClick() }
             .help(item.tooltip ?? "")
+            .opacity(isOverflowing ? 0 : 1)
+            .allowsHitTesting(!isOverflowing)
             .transition(.blurReplace)
     }
 
@@ -176,10 +188,11 @@ struct ScriptPopupView: View {
         .foregroundStyle(.white)
         .padding(25)
         .frame(minWidth: 220, alignment: .leading)
+        .fixedSize()
     }
 }
 
-private struct ScriptPopupRowView: View {
+struct ScriptPopupRowView: View {
     let row: ScriptPopupRow
     let model: ScriptWidgetModel
     @State private var hovered = false
