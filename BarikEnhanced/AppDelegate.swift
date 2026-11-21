@@ -38,6 +38,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         
         MenuBarPopup.setup()
         MenuBarMetrics.shared.startDetecting()
+        ScriptWidgets.shared.start()
+        terminateScriptsOnSignal()
         setupPanels()
 
         NotificationCenter.default.addObserver(
@@ -65,12 +67,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil)
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        ScriptWidgets.shared.stopAll()
+    }
+
+    /// `pkill` and launchd send SIGTERM, which skips applicationWillTerminate;
+    /// stream scripts and their children would outlive the bar.
+    private var terminationSignalSource: DispatchSourceSignal?
+
+    private func terminateScriptsOnSignal() {
+        signal(SIGTERM, SIG_IGN)
+        let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        source.setEventHandler { NSApp.terminate(nil) }
+        source.resume()
+        terminationSignalSource = source
+    }
+
     @objc private func screenParametersDidChange(_ notification: Notification) {
         MenuBarPopup.setup()
         setupPanels()
     }
 
     @objc private func systemDidWake(_ notification: Notification) {
+        ScriptWidgets.shared.trigger(BarikPushChannel.systemWokeEvent)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
             MenuBarMetrics.shared.restartDetection()
             MenuBarPopup.setup()
