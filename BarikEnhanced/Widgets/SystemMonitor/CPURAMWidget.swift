@@ -81,12 +81,11 @@ struct CPURAMWidget: View {
             Text(title)
                 .font(.system(size: 8, weight: .bold, design: .monospaced))
                 .foregroundStyle(color.opacity(0.65))
-                .frame(width: 23, alignment: .leading)
 
             Text("\(Int(value))%")
                 .font(.system(size: 9, weight: .semibold, design: .monospaced))
                 .foregroundStyle(color)
-                .frame(width: 30, alignment: .trailing)
+                .frame(width: 22, alignment: .trailing)
 
             LiveTrace(
                 values: Array(history.suffix(14)),
