@@ -267,6 +267,9 @@ struct MenuBarView: View {
         case "spacer":
             Spacer().frame(minWidth: 8, maxWidth: .infinity)
 
+        case "notch":
+            NotchWidget()
+
         case "divider":
             Rectangle()
                 .fill(Color.active)

@@ -35,5 +35,6 @@ let allWidgets: [WidgetDefinition] = [
     WidgetDefinition(id: "default.opencode-usage", name: "OpenCode", icon: "terminal", description: "OpenCode Go usage tracking (local DB)"),
     WidgetDefinition(id: "default.countdown", name: "Countdown", icon: "calendar.badge.clock", description: "Days until target date"),
     WidgetDefinition(id: "spacer", name: "Spacer", icon: "arrow.left.and.right", description: "Flexible space"),
+    WidgetDefinition(id: "notch", name: "Notch", icon: "rectangle.topthird.inset.filled", description: "Empty space as wide as the notch"),
     WidgetDefinition(id: "divider", name: "Divider", icon: "line.diagonal", description: "Visual separator"),
 ]
