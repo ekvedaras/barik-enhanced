@@ -1,41 +1,54 @@
-import EventKit
 import SwiftUI
 
 struct BatteryPopup: View {
     @ObservedObject private var batteryManager = BatteryManager.shared
+    @ObservedObject private var lowPowerMode = LowPowerMode.shared
 
     var body: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.gray.opacity(0.3), lineWidth: 6)
-            Circle()
-                .trim(from: 0, to: CGFloat(batteryManager.batteryLevel) / 100)
-                .stroke(
-                    batteryColor,
-                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
-                )
-                .rotationEffect(Angle(degrees: -90))
-                .animation(
-                    .easeOut(duration: 0.5), value: batteryManager.batteryLevel)
-            Image(systemName: "laptopcomputer")
-                .resizable()
-                .scaledToFit()
-                .padding(14)
-                .foregroundColor(.white)
-            if batteryManager.isPluggedIn {
-                Image(
-                    systemName: batteryManager.isCharging
-                        ? "bolt.fill" : "powerplug.portrait.fill"
-                )
-                .foregroundColor(.white)
-                .offset(y: -30)
-                .shadow(color: Color.black, radius: 2, x: 0, y: 0)
-                .shadow(color: Color.black, radius: 2, x: 0, y: 0)
-                .transition(.blurReplace)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Battery").font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Text("\(batteryManager.batteryLevel)%")
+                    .font(.system(size: 13))
+                    .foregroundStyle(batteryColor)
             }
+            Text(powerSource)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Label {
+                        Text("Low Power Mode").font(.system(size: 13))
+                    } icon: {
+                        Image(systemName: "battery.50percent")
+                            .foregroundStyle(lowPowerMode.isOn ? .yellow : .white)
+                    }
+                    Spacer()
+                    Toggle(
+                        "Low Power Mode",
+                        isOn: Binding(get: { lowPowerMode.isOn }, set: { lowPowerMode.set($0) })
+                    )
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                }
+                if let failure = lowPowerMode.failure {
+                    Text(failure)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.orange)
+                }
+            }
+            .popupTile()
         }
-        .frame(width: 60, height: 60)
-        .padding(30)
+        .padding(PopupStyle.padding)
+        .frame(width: 260)
+    }
+
+    private var powerSource: String {
+        let source = batteryManager.isPluggedIn ? "Power Adapter" : "Battery"
+        return "Power Source: \(source)" + (batteryManager.isCharging ? " · Charging" : "")
     }
 
     private var batteryColor: Color {

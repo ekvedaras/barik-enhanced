@@ -89,7 +89,7 @@ private struct ScriptOverflowPopup: View {
     let hidden: [ScriptOverflow.Entry]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: PopupStyle.rowSpacing) {
             ForEach(hidden, id: \.key) { entry in
                 let model = ScriptWidgets.shared.model(named: entry.name)
                 if let item = model.items.first(where: { $0.id == entry.itemID }) {
@@ -100,7 +100,7 @@ private struct ScriptOverflowPopup: View {
             }
         }
         .foregroundStyle(.white)
-        .padding(25)
+        .padding(PopupStyle.menuInset)
         .frame(minWidth: 220, alignment: .leading)
         .fixedSize()
     }

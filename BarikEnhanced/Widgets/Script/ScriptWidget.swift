@@ -182,7 +182,7 @@ struct ScriptPopupView: View {
 
     var body: some View {
         let item = model.items.first { $0.id == itemID }
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             if let item, item.icon != nil || item.label != nil {
                 HStack(spacing: 10) {
                     if let icon = item.icon {
@@ -193,15 +193,17 @@ struct ScriptPopupView: View {
                         Text(label).font(.headline)
                     }
                 }
+                .padding(.horizontal, 10)
+                .padding(.top, 6)
             }
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: PopupStyle.rowSpacing) {
                 ForEach(Array((item?.popup ?? []).enumerated()), id: \.offset) { _, row in
                     ScriptPopupRowView(row: row, model: model)
                 }
             }
         }
         .foregroundStyle(.white)
-        .padding(25)
+        .padding(PopupStyle.menuInset)
         .frame(minWidth: 220, alignment: .leading)
         .fixedSize()
     }
@@ -210,7 +212,6 @@ struct ScriptPopupView: View {
 struct ScriptPopupRowView: View {
     let row: ScriptPopupRow
     let model: ScriptWidgetModel
-    @State private var hovered = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -224,16 +225,10 @@ struct ScriptPopupRowView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(.white.opacity(row.click == nil ? 0 : hovered ? 0.2 : 0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .contentShape(Rectangle())
-        .onHover { hovered = $0 }
+        .popupRow(isInteractive: row.click != nil)
         .onTapGesture {
             if let click = row.click { model.run(click) }
         }
-        .animation(.smooth(duration: 0.15), value: hovered)
     }
 }
 

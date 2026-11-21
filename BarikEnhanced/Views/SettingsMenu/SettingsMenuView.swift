@@ -10,12 +10,12 @@ struct SettingsMenuView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: PopupStyle.rowSpacing) {
             SettingsMenuItem(icon: "square.grid.2x2", title: "Configure Widgets") {
                 WidgetConfiguratorWindow.show()
             }
 
-            BackgroundBlurToggle(isEnabled: backgroundBlurEnabled) {
+            SettingsMenuItem(icon: backgroundBlurEnabled ? "checkmark" : nil, title: "Blur Background") {
                 configManager.updateConfigValue(
                     key: "experimental.background.displayed",
                     newValue: backgroundBlurEnabled ? "false" : "true",
@@ -30,8 +30,7 @@ struct SettingsMenuView: View {
                 }
             }
 
-            // Launch at Login
-            Button(action: {
+            SettingsMenuItem(icon: launchAtLogin ? "checkmark" : nil, title: "Launch at Login") {
                 launchAtLogin.toggle()
                 do {
                     if launchAtLogin {
@@ -42,26 +41,9 @@ struct SettingsMenuView: View {
                 } catch {
                     launchAtLogin = !launchAtLogin
                 }
-            }) {
-                HStack(spacing: 10) {
-                    Image(systemName: launchAtLogin ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 13))
-                        .foregroundStyle(launchAtLogin ? .green : .white.opacity(0.4))
-                        .frame(width: 20)
-
-                    Text("Launch at Login")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.white)
-
-                    Spacer()
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .contentShape(Rectangle())
             }
-            .buttonStyle(PlainButtonStyle())
 
-            Divider().background(.white.opacity(0.15)).padding(.horizontal, 12).padding(.vertical, 2)
+            Divider().padding(.horizontal, 10).padding(.vertical, 4)
 
             SettingsMenuItem(icon: "info.circle", title: "About Barik Enhanced") {
                 AboutWindow.show()
@@ -71,60 +53,30 @@ struct SettingsMenuView: View {
                 NSApp.terminate(nil)
             }
         }
-        .padding(.vertical, 6)
-        .frame(width: 200)
+        .padding(PopupStyle.menuInset)
+        .frame(width: 240)
     }
 }
 
-private struct BackgroundBlurToggle: View {
-    let isEnabled: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: isEnabled ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 13))
-                    .foregroundStyle(isEnabled ? .green : .white.opacity(0.4))
-                    .frame(width: 20)
-
-                Text("Blur Background")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white)
-
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
+/// A menu row; an icon of nil leaves its column empty, like an unchecked menu item.
 struct SettingsMenuItem: View {
-    let icon: String
+    let icon: String?
     let title: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: icon)
+            HStack(spacing: 8) {
+                Image(systemName: icon ?? "circle")
                     .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.5))
-                    .frame(width: 20)
+                    .opacity(icon == nil ? 0 : 0.8)
+                    .frame(width: 18)
 
                 Text(title)
                     .font(.system(size: 13))
-                    .foregroundStyle(.white)
-
-                Spacer()
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
+            .popupRow()
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
     }
 }

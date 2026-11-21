@@ -9,8 +9,10 @@ enum PopupStyle {
     static let cornerRadius: CGFloat = 22
     /// Inset between a popup's edge and its content.
     static let padding: CGFloat = 14
+    /// Inset of a menu-like popup, whose rows carry their own padding.
+    static let menuInset: CGFloat = 6
     static let rowSpacing: CGFloat = 2
-    static let rowCornerRadius: CGFloat = 8
+    static let rowCornerRadius: CGFloat = 10
     static let tileCornerRadius: CGFloat = 16
 
     static var surfaceShape: RoundedRectangle {
