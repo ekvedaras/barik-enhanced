@@ -27,6 +27,12 @@ class HidingPanel: NSPanel, NSWindowDelegate {
     }
 
     func windowDidResignKey(_ notification: Notification) {
+        hide(returningFocus: false)
+    }
+
+    /// Losing key means focus already went elsewhere, so only explicit closes return it.
+    func hide(returningFocus: Bool = true) {
+        if returningFocus { MenuBarPopup.returnFocus() }
         hideTimer?.invalidate()
         NotificationCenter.default.post(name: .willHideWindow, object: nil)
         hideTimer = Timer.scheduledTimer(
@@ -42,6 +48,48 @@ class HidingPanel: NSPanel, NSWindowDelegate {
 class MenuBarPopup {
     static var lastContentIdentifier: String? = nil
     static var currentScreenIndex: Int? = nil
+
+    /// The app that had focus before a popup opened. Barik takes focus while a
+    /// popup is open, because only the active app gets key events (Escape).
+    private static var previousApp: NSRunningApplication?
+
+    private static func takeFocus() {
+        _ = closeMonitor
+        let front = NSWorkspace.shared.frontmostApplication
+        if front != NSRunningApplication.current {
+            previousApp = front
+        }
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// Gives focus back only while Barik still has it: a click into another app keeps that app.
+    /// Escape, or a click in the bar outside the popup, closes an open popup.
+    /// Clicks in other apps already close it: the panel loses key.
+    private static let closeMonitor = NSEvent.addLocalMonitorForEvents(
+        matching: [.keyDown, .leftMouseUp, .rightMouseUp]
+    ) { event in
+        guard let open = panels.first(where: { $0.isVisible }) as? HidingPanel else { return event }
+        if event.type == .keyDown {
+            guard event.keyCode == 53 else { return event }
+            lastContentIdentifier = nil
+            open.hide()
+            return nil
+        }
+        if event.window !== open {
+            // A click on another widget swaps the popup's content instead.
+            let shownBefore = lastContentIdentifier
+            DispatchQueue.main.async {
+                if lastContentIdentifier == shownBefore { open.hide() }
+            }
+        }
+        return event
+    }
+
+    static func returnFocus() {
+        defer { previousApp = nil }
+        guard NSApp.isActive, let previousApp else { return }
+        previousApp.activate()
+    }
 
     static func show<Content: View>(
         rect: CGRect, id: String, @ViewBuilder content: @escaping () -> Content
@@ -61,6 +109,7 @@ class MenuBarPopup {
             let duration =
                 Double(Constants.menuBarPopupAnimationDurationInMilliseconds)
                 / 1000.0
+            returnFocus()
             DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
                 panel.orderOut(nil)
                 lastContentIdentifier = nil
@@ -96,7 +145,8 @@ class MenuBarPopup {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 )
-                panel.makeKeyAndOrderFront(nil)
+                takeFocus()
+            panel.makeKeyAndOrderFront(nil)
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(
                         name: .willShowWindow, object: nil)
@@ -113,6 +163,7 @@ class MenuBarPopup {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             )
+            takeFocus()
             panel.makeKeyAndOrderFront(nil)
             DispatchQueue.main.async {
                 NotificationCenter.default.post(
