@@ -42,13 +42,12 @@ struct TimeWidget: View {
                 eventView(nextEvent)
             }
             Text(formattedTime(pattern: format, from: currentTime))
-                .fontWeight(.semibold)
             if !calendarEventsInline, let nextEvent {
                 eventView(nextEvent)
                     .font(.subheadline)
             }
         }
-        .font(.headline)
+        .font(BarStyle.font)
         .lineLimit(1)
         .foregroundStyle(.foregroundOutside)
         .shadow(color: .foregroundShadowOutside, radius: 3)

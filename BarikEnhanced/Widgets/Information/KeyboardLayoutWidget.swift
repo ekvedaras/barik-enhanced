@@ -9,7 +9,7 @@ struct KeyboardLayoutWidget: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(keyboardLayoutManager.currentInputSource)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .font(BarStyle.font)
                 .foregroundStyle(.primary)
                 .frame(minWidth: 20)
         }
