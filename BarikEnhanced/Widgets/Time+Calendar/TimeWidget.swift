@@ -39,14 +39,12 @@ struct TimeWidget: View {
             : AnyLayout(VStackLayout(alignment: .trailing, spacing: 0))
         layout {
             if calendarEventsInline, let nextEvent {
-                Text(eventText(for: nextEvent))
-                    .opacity(0.8)
+                eventView(nextEvent)
             }
             Text(formattedTime(pattern: format, from: currentTime))
                 .fontWeight(.semibold)
             if !calendarEventsInline, let nextEvent {
-                Text(eventText(for: nextEvent))
-                    .opacity(0.8)
+                eventView(nextEvent)
                     .font(.subheadline)
             }
         }
@@ -75,13 +73,51 @@ struct TimeWidget: View {
         .background(.black.opacity(0.001))
         .contentShape(Rectangle())
         .monospacedDigit()
-        .onTapGesture {
-            MenuBarPopup.show(rect: rect, id: "calendar") {
-                CalendarPopup(
-                    calendarManager: calendarManager,
-                    configProvider: configProvider)
+        .onTapGesture { showCalendarPopup() }
+    }
+
+    private func showCalendarPopup() {
+        MenuBarPopup.show(rect: rect, id: "calendar") {
+            CalendarPopup(
+                calendarManager: calendarManager,
+                configProvider: configProvider)
+        }
+    }
+
+    /// Accent text in the 5 minutes before the event, an accent pill in the
+    /// first 2 minutes after it starts. A click joins its Meet/Zoom/Teams link.
+    private func eventView(_ event: EKEvent) -> some View {
+        let urgency = EventUrgency(
+            start: event.startDate, isAllDay: event.isAllDay, now: EventClock.now(currentTime))
+        let link = MeetingLinkDetector.detect(
+            structuredURL: event.url, location: event.location, notes: event.notes)
+        return HStack(spacing: 4) {
+            if let link {
+                Image(systemName: link.service.symbolName)
+                    .font(.caption)
+            }
+            Text(eventText(for: event))
+        }
+        .foregroundStyle(
+            urgency == .started ? AnyShapeStyle(.black)
+                : urgency == .soon ? AnyShapeStyle(Color.accentColor)
+                : AnyShapeStyle(.foregroundOutside))
+        .opacity(urgency == .none ? 0.8 : 1)
+        .padding(.horizontal, urgency == .started ? 6 : 0)
+        .background {
+            if urgency == .started {
+                Capsule().fill(Color.accentColor).padding(.vertical, -2)
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if let link {
+                MeetingJoinCoordinator().join(link)
+            } else {
+                showCalendarPopup()
+            }
+        }
+        .help(link.map { "Join \($0.service.displayName)" } ?? "")
     }
 
     // Format the current time.
