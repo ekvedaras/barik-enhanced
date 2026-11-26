@@ -426,6 +426,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Barik Enhanced";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "We need this permission for control of third-party media players via an interactive widget";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Script widgets run tools such as blueutil that connect and disconnect Bluetooth devices";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "We need this permission for displaying calendar events";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Mateo Cerquetella";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app uses location permission for display WiFi network name";
@@ -460,6 +461,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Barik Enhanced";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "We need this permission for control of third-party media players via an interactive widget";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Script widgets run tools such as blueutil that connect and disconnect Bluetooth devices";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "We need this permission for displaying calendar events";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Mateo Cerquetella";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app uses location permission for display WiFi network name";
