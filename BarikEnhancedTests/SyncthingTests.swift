@@ -165,8 +165,8 @@ final class SyncthingTests: XCTestCase {
 }
 
 private final class SyncthingTestURLProtocol: URLProtocol {
-    static var folderPaused = false
-    static var remoteState = "valid"
+    nonisolated(unsafe) static var folderPaused = false
+    nonisolated(unsafe) static var remoteState = "valid"
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest {
         request
